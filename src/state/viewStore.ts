@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type { ModuleId } from '../data/types'
+import { EMPTY_FILTER, type FilterState } from '../lib/filter'
+import { loadRecent, pushRecent, type RecentEntry } from '../lib/recent'
 
 export type HoverInfo = {
   stepId: string
@@ -30,8 +32,21 @@ type ViewState = {
   flowId: string
   /** 导航动画结束的时间戳：动画途中会短暂经过 L0，不能据此清焦点 */
   navUntil: number
+  /** 视口是否已经离开全部内容：为真时出现「回到内容」 */
+  offGrid: boolean
+  /** 触屏（pointer: coarse）：点按先预览、再点才下钻 */
+  coarse: boolean
+  filter: FilterState
+  /** 最近访问，最多 8 条，落 localStorage */
+  recent: RecentEntry[]
 
   setLod: (n: number) => void
+  setOffGrid: (v: boolean) => void
+  setCoarse: (v: boolean) => void
+  setFilter: (patch: Partial<FilterState>) => void
+  clearFilter: () => void
+  addRecent: (entry: Omit<RecentEntry, 'at'>) => void
+  clearRecent: () => void
   clearFocus: () => void
   setSize: (w: number, h: number) => void
   focusModule: (id: ModuleId | null) => void
@@ -66,10 +81,33 @@ export const useViewStore = create<ViewState>((set, get) => ({
   flowOpen: false,
   flowId: 'flow.p2c',
   navUntil: 0,
+  offGrid: false,
+  coarse: false,
+  filter: EMPTY_FILTER,
+  recent: loadRecent(),
 
   setLod: (n) => {
     if (get().lod === n) return
     set({ lod: n })
+  },
+  setOffGrid: (v) => {
+    if (get().offGrid === v) return
+    set({ offGrid: v })
+  },
+  setCoarse: (v) => {
+    if (get().coarse === v) return
+    set({ coarse: v })
+  },
+  setFilter: (patch) => set({ filter: { ...get().filter, ...patch } }),
+  clearFilter: () => set({ filter: EMPTY_FILTER }),
+  addRecent: (entry) => set({ recent: pushRecent(get().recent, entry) }),
+  clearRecent: () => {
+    set({ recent: [] })
+    try {
+      localStorage.removeItem('sap-map.recent.v1')
+    } catch {
+      // 忽略：隐私模式下不可写
+    }
   },
   // 由画布在「稳定处于 L0」时调用：导航动画途中会短暂经过 L0，不能立刻清，
   // 否则深链刚聚焦就被抹掉。

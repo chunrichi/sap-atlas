@@ -4,6 +4,7 @@ import { useNavigate } from '../canvas/hooks/useNavigate'
 import { LOD_LABEL } from '../canvas/lod/lod.config'
 import { cx } from '../lib/cx'
 import ImpactChip from './ImpactChip'
+import FilterBar from './FilterBar'
 
 export default function Hud() {
   const focusedModuleId = useViewStore((s) => s.focusedModuleId)
@@ -85,6 +86,7 @@ export default function Hud() {
             </span>
           ))}
         </div>
+        <FilterBar />
         <div className="legend">
           <span className="legend-item" data-kind="human">
             <i /> 人工

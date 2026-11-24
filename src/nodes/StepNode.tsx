@@ -5,6 +5,7 @@ import { STEP_H, STEP_W } from '../canvas/layout/layout'
 import { KIND_LABEL } from '../data'
 import { useNavigate } from '../canvas/hooks/useNavigate'
 import { useViewStore } from '../state/viewStore'
+import { filterActive, stepMatches } from '../lib/filter'
 import { cx } from '../lib/cx'
 
 function StepNodeView({ data }: NodeProps<StepFlowNode>) {
@@ -14,12 +15,31 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
   const hoverStep = useViewStore((s) => s.hoverStep)
   const scheduleHide = useViewStore((s) => s.scheduleHide)
   const impactId = useViewStore((s) => s.impactObjectId)
+  const coarse = useViewStore((s) => s.coarse)
+  const selectedStepId = useViewStore((s) => s.selectedStepId)
+  const selectStep = useViewStore((s) => s.selectStep)
+  const filter = useViewStore((s) => s.filter)
   const { goStep } = useNavigate()
 
   const borrowed = home.id !== m.id
   const linked = hoveredStepId === step.id
   const soft = Boolean(focusedProcess) && focusedProcess !== process.id
   const impact = impactId ? step.objectIds.includes(impactId) : null
+  const filteredOut = filterActive(filter) && !stepMatches(step, m.id, filter)
+  const isSelected = selectedStepId === step.id
+
+  /** 触屏没有 hover：把卡片锚在卡片自身位置，由卡片自己改成底部抽屉 */
+  const anchorCard = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect()
+    hoverStep({
+      stepId: step.id,
+      processId: process.id,
+      x: r.right,
+      y: r.top,
+      w: r.width,
+      h: r.height,
+    })
+  }
 
   return (
     <div
@@ -29,6 +49,8 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
         soft && 'is-soft',
         impact === true && 'is-impact',
         impact === false && 'is-impact-dim',
+        filteredOut && 'is-filter-dim',
+        isSelected && 'is-selected',
       )}
       data-kind={step.kind}
       style={
@@ -40,6 +62,7 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
         } as React.CSSProperties
       }
       onMouseEnter={(e) => {
+        if (coarse) return
         const r = e.currentTarget.getBoundingClientRect()
         hoverStep({
           stepId: step.id,
@@ -50,8 +73,17 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
           h: r.height,
         })
       }}
-      onMouseLeave={scheduleHide}
-      onClick={() => goStep(process.id, step.id)}
+      onMouseLeave={coarse ? undefined : scheduleHide}
+      onClick={(e) => {
+        // 触屏：第一次点按只"看"，第二次才下钻——否则手指一碰就飞走，回不来
+        if (coarse && !isSelected) {
+          e.preventDefault()
+          anchorCard(e.currentTarget)
+          selectStep(step.id)
+          return
+        }
+        goStep(process.id, step.id)
+      }}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {

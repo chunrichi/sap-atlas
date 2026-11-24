@@ -11,15 +11,23 @@ function LaneNodeView({ data }: NodeProps<LaneNodeType>) {
   const { process: p, module: m, stepCount } = data
   const focusedModule = useViewStore((s) => s.focusedModuleId)
   const focusedProcess = useViewStore((s) => s.focusedProcessId)
+  const filterModule = useViewStore((s) => s.filter.moduleId)
   const { goProcess } = useNavigate()
 
   const index = (processesByModule[m.id] ?? []).findIndex((x) => x.id === p.id) + 1
   const dim = Boolean(focusedModule) && focusedModule !== m.id
   const soft = Boolean(focusedProcess) && focusedProcess !== p.id && focusedModule === m.id
+  const filteredOut = Boolean(filterModule) && filterModule !== m.id
 
   return (
     <div
-      className={cx('node-lane', dim && 'is-dim', soft && 'is-soft', focusedProcess === p.id && 'is-active')}
+      className={cx(
+        'node-lane',
+        dim && 'is-dim',
+        soft && 'is-soft',
+        filteredOut && 'is-filter-dim',
+        focusedProcess === p.id && 'is-active',
+      )}
       style={
         {
           width: LANE_W,

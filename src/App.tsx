@@ -7,10 +7,13 @@ import ObjectDrawer from './panels/ObjectDrawer'
 import CommandPalette from './panels/CommandPalette'
 import GhostCompass from './panels/GhostCompass'
 import FlowRail from './panels/FlowRail'
+import BackToContent from './panels/BackToContent'
+import RecentRail from './panels/RecentRail'
 import { useHashRoute } from './app/hooks/useHashRoute'
 import { useNavigate } from './canvas/hooks/useNavigate'
 import { validateContent } from './data'
 import { useViewStore } from './state/viewStore'
+import { filterActive } from './lib/filter'
 
 if (import.meta.env.DEV) {
   const problems = validateContent()
@@ -21,6 +24,16 @@ if (import.meta.env.DEV) {
 function Shell() {
   useHashRoute()
   const nav = useNavigate()
+  const setCoarse = useViewStore((s) => s.setCoarse)
+
+  // 触屏：点按先预览、再点才下钻。用媒体查询而不是 UA 嗅探（可翻转的二合一设备）
+  useEffect(() => {
+    const mq = window.matchMedia('(pointer: coarse)')
+    setCoarse(mq.matches)
+    const on = (e: MediaQueryListEvent) => setCoarse(e.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [setCoarse])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -83,6 +96,8 @@ function Shell() {
       <MapCanvas />
       <Hud />
       <GhostCompass />
+      <RecentRail />
+      <BackToContent />
       <FlowRail />
       <StepHoverCard />
       <ObjectDrawer />
@@ -95,6 +110,9 @@ export default function App() {
   const lod = useViewStore((s) => s.lod)
   const flowOpen = useViewStore((s) => s.flowOpen)
   const impact = useViewStore((s) => s.impactObjectId)
+  const offGrid = useViewStore((s) => s.offGrid)
+  const filtering = useViewStore((s) => s.filter)
+  const filterOn = filterActive(filtering)
 
   return (
     <div
@@ -102,6 +120,8 @@ export default function App() {
       data-lod={lod}
       data-flow={flowOpen ? '1' : '0'}
       data-impact={impact ? '1' : '0'}
+      data-offgrid={offGrid ? '1' : '0'}
+      data-filter={filterOn ? '1' : '0'}
     >
       <ReactFlowProvider>
         <Shell />

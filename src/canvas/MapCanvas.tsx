@@ -12,6 +12,7 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import { buildEdges, buildNodes } from '../graph/buildGraph'
+import { modules } from '../data'
 import ModuleNode from '../nodes/ModuleNode'
 import LaneNode from '../nodes/LaneNode'
 import StepNode from '../nodes/StepNode'
@@ -20,7 +21,7 @@ import Highways from './Highways'
 import GhostLinks from './GhostLinks'
 import { useViewStore } from '../state/viewStore'
 import { lodFromZoom } from './lod/lod.config'
-import { homeViewport } from './layout/layout'
+import { homeViewport, moduleRect } from './layout/layout'
 
 const nodeTypes = { module: ModuleNode, lane: LaneNode, step: StepNode }
 
@@ -42,8 +43,29 @@ export default function MapCanvas() {
   const lod = useViewStore((s) => s.lod)
   const setLod = useViewStore((s) => s.setLod)
   const setSize = useViewStore((s) => s.setSize)
+  const setOffGrid = useViewStore((s) => s.setOffGrid)
+  const hideNow = useViewStore((s) => s.hideNow)
+  const selectStep = useViewStore((s) => s.selectStep)
   const wrapRef = useRef<HTMLDivElement>(null)
   const rf = useReactFlow()
+
+  /** 视口与任一模块都不相交 = 眼前没有任何内容 */
+  const checkOffGrid = (vp: { x: number; y: number; zoom: number }) => {
+    const r = wrapRef.current?.getBoundingClientRect()
+    const vw = r?.width ?? 0
+    const vh = r?.height ?? 0
+    if (vw < 2 || vh < 2) return
+    const x0 = -vp.x / vp.zoom
+    const y0 = -vp.y / vp.zoom
+    const x1 = x0 + vw / vp.zoom
+    const y1 = y0 + vh / vp.zoom
+    const M = 80 // 只露一条边也还算「看得到」，别过早弹提示
+    const hit = modules.some((m) => {
+      const b = moduleRect(m)
+      return b.x + b.w > x0 + M && b.x < x1 - M && b.y + b.h > y0 + M && b.y < y1 - M
+    })
+    setOffGrid(!hit)
+  }
 
   useEffect(() => {
     setLod(lodFromZoom(zoom))
@@ -91,12 +113,20 @@ export default function MapCanvas() {
         preventScrolling
         onlyRenderVisibleElements={false}
         className="sap-flow"
+        onMoveEnd={(_, vp) => checkOffGrid(vp)}
+        // 点空白处 = 收起悬停卡、取消选中（触屏上这是唯一的"退出"手势）
+        onPaneClick={() => {
+          hideNow()
+          selectStep(null)
+        }}
         onInit={() => {
           const el = wrapRef.current
           if (!el) return
           const r = el.getBoundingClientRect()
           if (r.width < 2) return
-          void rf.setViewport(homeViewport(r.width, r.height))
+          const vp = homeViewport(r.width, r.height)
+          void rf.setViewport(vp)
+          checkOffGrid(vp)
         }}
       >
         <Background

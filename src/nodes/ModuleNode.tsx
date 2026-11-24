@@ -9,15 +9,23 @@ import { cx } from '../lib/cx'
 function ModuleNodeView({ data }: NodeProps<ModuleNodeType>) {
   const { module: m, processCount, stepCount } = data
   const focused = useViewStore((s) => s.focusedModuleId)
+  const filterModule = useViewStore((s) => s.filter.moduleId)
   const { goModule } = useNavigate()
 
   const planned = m.status === 'planned'
   const dim = Boolean(focused) && focused !== m.id
   const active = focused === m.id
+  const filteredOut = Boolean(filterModule) && filterModule !== m.id
 
   return (
     <div
-      className={cx('node-module', dim && 'is-dim', active && 'is-active', planned && 'is-planned')}
+      className={cx(
+        'node-module',
+        dim && 'is-dim',
+        active && 'is-active',
+        planned && 'is-planned',
+        filteredOut && 'is-filter-dim',
+      )}
       data-module={m.id}
       style={
         {

@@ -55,6 +55,7 @@ export function useNavigate() {
   const selectStep = useViewStore((s) => s.selectStep)
   const reset = useViewStore((s) => s.reset)
   const markNav = useViewStore((s) => s.markNav)
+  const addRecent = useViewStore((s) => s.addRecent)
 
   const fly = useCallback(
     (vp: { x: number; y: number; zoom: number }, duration = 700) => {
@@ -85,10 +86,17 @@ export function useNavigate() {
       focusModule(id)
       const m = moduleById[id]
       if (!m) return
+      addRecent({
+        key: `m:${id}`,
+        kind: 'module',
+        moduleId: id,
+        title: `${m.code} ${m.name}`,
+        accent: m.accent,
+      })
       const { w, h } = measure()
       fly(viewportFor(moduleRect(m), ZOOM.module, w, h))
     },
-    [fly, focusModule],
+    [addRecent, fly, focusModule],
   )
 
   const goProcess = useCallback(
@@ -99,6 +107,14 @@ export function useNavigate() {
       focusModule(p.moduleId)
       focusProcess(id)
       const m = moduleById[p.moduleId]
+      addRecent({
+        key: `p:${id}`,
+        kind: 'process',
+        moduleId: p.moduleId,
+        processId: id,
+        title: p.name,
+        accent: m?.accent ?? '#64748b',
+      })
       const lane = laneRect(m, laneIndexOf(p.moduleId, id))
       const { w, h } = measure()
       // 让整条流程一次看全：按内容宽高算缩放，而不是固定倍率
@@ -125,7 +141,7 @@ export function useNavigate() {
       }
       fly(vp, 760)
     },
-    [fly, focusModule, focusProcess],
+    [addRecent, fly, focusModule, focusProcess],
   )
 
   const goStep = useCallback(
@@ -141,11 +157,20 @@ export function useNavigate() {
       focusModule(p.moduleId)
       focusProcess(processId)
       selectStep(stepId)
+      addRecent({
+        key: `s:${processId}::${stepId}`,
+        kind: 'step',
+        moduleId: p.moduleId,
+        processId,
+        stepId,
+        title: step.name,
+        accent: m?.accent ?? '#64748b',
+      })
       const { w, h } = measure()
       const r = stepRect(lane, placement.col, placement.row, stepYBase(maxRowOf(p)))
       fly(viewportFor(r, ZOOM.step, w, h), 620)
     },
-    [fly, focusModule, focusProcess, selectStep],
+    [addRecent, fly, focusModule, focusProcess, selectStep],
   )
 
   return { goHome, goModule, goProcess, goStep }

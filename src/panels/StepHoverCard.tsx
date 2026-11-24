@@ -32,7 +32,8 @@ export default function StepHoverCard() {
   const keepHover = useViewStore((s) => s.keepHover)
   const hideNow = useViewStore((s) => s.hideNow)
   const openObject = useViewStore((s) => s.openObject)
-  const { goProcess } = useNavigate()
+  const coarse = useViewStore((s) => s.coarse)
+  const { goProcess, goStep } = useNavigate()
 
   if (!hover || objectId) return null
 
@@ -82,12 +83,13 @@ export default function StepHoverCard() {
 
   return (
     <div
-      className="hover-card"
+      className={cx('hover-card', coarse && 'is-sheet')}
       data-side={side}
       style={{ left, top, width: W, maxHeight: H }}
       onMouseEnter={keepHover}
       onMouseLeave={hideNow}
     >
+      {coarse && <span className="hc-grab" aria-hidden />}
       <div className="hc-head">
         <span className="hc-order">{String(order).padStart(2, '0')}</span>
         <div className="hc-title-wrap">
@@ -97,6 +99,11 @@ export default function StepHoverCard() {
             {step.tcode ? ` · ${step.tcode}` : ''}
           </div>
         </div>
+        {coarse && (
+          <button type="button" className="hc-close" onClick={hideNow} aria-label="收起">
+            ×
+          </button>
+        )}
       </div>
 
       <div className="hc-facts">
@@ -173,7 +180,23 @@ export default function StepHoverCard() {
 
       {step.note && <div className="hc-note">{step.note}</div>}
 
-      <div className="hc-foot">点击开发对象查看参数与示例代码</div>
+      <div className="hc-foot">
+        {coarse ? (
+          // 抽屉会盖住刚点的那张卡，"再点一次"不可达，所以给一个明确入口
+          <button
+            type="button"
+            className="hc-enter"
+            onClick={() => {
+              hideNow()
+              goStep(process.id, step.id)
+            }}
+          >
+            进入这一步 <span aria-hidden>→</span>
+          </button>
+        ) : (
+          '点击开发对象查看参数与示例代码'
+        )}
+      </div>
     </div>
   )
 }
