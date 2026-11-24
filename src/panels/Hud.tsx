@@ -3,6 +3,7 @@ import { moduleById, processById, stepById } from '../data'
 import { useNavigate } from '../canvas/hooks/useNavigate'
 import { LOD_LABEL } from '../canvas/lod/lod.config'
 import { cx } from '../lib/cx'
+import ImpactChip from './ImpactChip'
 
 export default function Hud() {
   const focusedModuleId = useViewStore((s) => s.focusedModuleId)
@@ -21,7 +22,7 @@ export default function Hud() {
   return (
     <>
       <header className="hud-top">
-        <button type="button" className="brand" onClick={goHome}>
+        <button type="button" className="brand" onClick={() => goHome()}>
           <span className="brand-mark" />
           <span className="brand-text">
             <b>SAP Map</b>
@@ -30,7 +31,7 @@ export default function Hud() {
         </button>
 
         <nav className="crumb" aria-label="当前位置">
-          <button type="button" className={cx('crumb-item', !mod && 'is-current')} onClick={goHome}>
+          <button type="button" className={cx('crumb-item', !mod && 'is-current')} onClick={() => goHome()}>
             全部模块
           </button>
           {mod && (
@@ -65,6 +66,8 @@ export default function Hud() {
             </>
           )}
         </nav>
+
+        <ImpactChip />
 
         <button type="button" className="hud-search" onClick={() => setSearchOpen(true)}>
           <span aria-hidden>⌕</span>

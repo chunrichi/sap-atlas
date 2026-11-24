@@ -27,7 +27,9 @@ export const ZOOM = {
   step: 1.28,
 } as const
 
-/** 不依赖 store 里的尺寸，直接量容器 —— 节点被 memo 后订阅值会过期 */
+/** 从 hash / popstate 恢复视图时不能写历史，否则后退会原地打转 */
+export type NavOpts = { history?: boolean }
+
 let navToken = 0
 
 function measure() {
@@ -43,6 +45,8 @@ function viewportFor(rect: Rect, zoom: number, vw: number, vh: number) {
     zoom,
   }
 }
+
+const historyMode = (opts?: NavOpts) => (opts?.history === false ? 'replace' : 'push')
 
 export function useNavigate() {
   const rf = useReactFlow()
@@ -65,16 +69,19 @@ export function useNavigate() {
     [markNav, rf],
   )
 
-  const goHome = useCallback(() => {
-    writeHash({ kind: 'home' })
-    reset()
-    const { w, h } = measure()
-    fly(homeViewport(w, h), 800)
-  }, [fly, reset])
+  const goHome = useCallback(
+    (opts?: NavOpts) => {
+      writeHash({ kind: 'home' }, historyMode(opts))
+      reset()
+      const { w, h } = measure()
+      fly(homeViewport(w, h), 800)
+    },
+    [fly, reset],
+  )
 
   const goModule = useCallback(
-    (id: ModuleId) => {
-      writeHash({ kind: 'module', moduleId: id })
+    (id: ModuleId, opts?: NavOpts) => {
+      writeHash({ kind: 'module', moduleId: id }, historyMode(opts))
       focusModule(id)
       const m = moduleById[id]
       if (!m) return
@@ -85,10 +92,10 @@ export function useNavigate() {
   )
 
   const goProcess = useCallback(
-    (id: string) => {
+    (id: string, opts?: NavOpts) => {
       const p = processById[id]
       if (!p) return
-      writeHash({ kind: 'process', processId: id })
+      writeHash({ kind: 'process', processId: id }, historyMode(opts))
       focusModule(p.moduleId)
       focusProcess(id)
       const m = moduleById[p.moduleId]
@@ -107,14 +114,22 @@ export function useNavigate() {
         ZOOM.process.min,
         Math.min(ZOOM.process.max, Math.min((w - 96) / contentW, (h - 130) / contentH)),
       )
-      const rect = { x: lane.x, y: bandTop, w: contentW, h: contentH }
-      fly(viewportFor(rect, zoom, w, h), 760)
+      // 缩放有下限（再小就跌回 L1），窄视口下内容必然溢出。
+      // 这时改成「左对齐 + 上留白」，保证泳道标题和流程起点可见，剩下的靠平移。
+      const fitsW = contentW * zoom <= w - 48
+      const fitsH = contentH * zoom <= h - 136
+      const vp = {
+        x: fitsW ? w / 2 - (lane.x + contentW / 2) * zoom : 24 - lane.x * zoom,
+        y: fitsH ? h / 2 - (bandTop + contentH / 2) * zoom : 104 - bandTop * zoom,
+        zoom,
+      }
+      fly(vp, 760)
     },
     [fly, focusModule, focusProcess],
   )
 
   const goStep = useCallback(
-    (processId: string, stepId: string) => {
+    (processId: string, stepId: string, opts?: NavOpts) => {
       const p = processById[processId]
       const step = stepById[stepId]
       if (!p || !step) return
@@ -122,7 +137,7 @@ export function useNavigate() {
       const lane = laneRect(m, laneIndexOf(p.moduleId, processId))
       const placement = p.lanes.find((l) => l.stepId === stepId)
       if (!placement) return
-      writeHash({ kind: 'step', processId, stepId })
+      writeHash({ kind: 'step', processId, stepId }, historyMode(opts))
       focusModule(p.moduleId)
       focusProcess(processId)
       selectStep(stepId)
@@ -130,7 +145,7 @@ export function useNavigate() {
       const r = stepRect(lane, placement.col, placement.row, stepYBase(maxRowOf(p)))
       fly(viewportFor(r, ZOOM.step, w, h), 620)
     },
-    [fly, focusProcess, selectStep],
+    [fly, focusModule, focusProcess, selectStep],
   )
 
   return { goHome, goModule, goProcess, goStep }

@@ -50,12 +50,40 @@ export default function StepHoverCard() {
 
   const W = 358
   const H = Math.min(window.innerHeight * 0.78, 600)
-  const left = Math.max(12, Math.min(hover.x + 16, window.innerWidth - W - 16))
-  const top = Math.max(14, Math.min(hover.y - 12, window.innerHeight - H - 16))
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const GAP = 14
+  const rightLeft = hover.x + GAP
+  const leftLeft = hover.x - hover.w - GAP - W
+
+  // 默认贴右侧；右边放不下就翻到左侧；两侧都放不下才退到上/下方，
+  // 任何情况下都不让浮层压住正在悬停的那张卡。
+  let side: 'right' | 'left' | 'below' | 'above'
+  let left: number
+  let top: number
+  if (rightLeft + W <= vw - 12) {
+    side = 'right'
+    left = rightLeft
+  } else if (leftLeft >= 12) {
+    side = 'left'
+    left = leftLeft
+  } else {
+    left = Math.max(12, Math.min(hover.x - hover.w / 2 - W / 2, vw - W - 12))
+    side = hover.y + hover.h + GAP + 120 < vh ? 'below' : 'above'
+  }
+
+  if (side === 'below') {
+    top = hover.y + hover.h + GAP
+  } else if (side === 'above') {
+    top = Math.max(14, hover.y - H - GAP)
+  } else {
+    top = Math.max(14, Math.min(hover.y - 10, vh - H - 16))
+  }
 
   return (
     <div
       className="hover-card"
+      data-side={side}
       style={{ left, top, width: W, maxHeight: H }}
       onMouseEnter={keepHover}
       onMouseLeave={hideNow}

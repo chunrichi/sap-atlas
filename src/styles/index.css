@@ -2029,3 +2029,263 @@ button {
   color: var(--ink);
   box-shadow: 0 1px 4px rgba(16, 24, 40, 0.12);
 }
+
+/* ───────────────── 影响面模式 ───────────────── */
+
+.impact-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(560px, 52vw);
+  padding: 6px 8px 6px 10px;
+  border-radius: 13px;
+  background: #17356e;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: var(--shadow-sm);
+  color: #fff;
+  font-size: 11.5px;
+  pointer-events: auto;
+  animation: impact-in 0.22s var(--ease);
+}
+
+@keyframes impact-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.impact-chip-tag {
+  flex: none;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.17);
+}
+
+.impact-chip b {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.impact-chip-stat {
+  flex: none;
+  color: rgba(255, 255, 255, 0.74);
+  white-space: nowrap;
+}
+
+.impact-chip-mods {
+  display: flex;
+  gap: 3px;
+  flex: none;
+}
+
+.impact-chip-mods i {
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 9px;
+  line-height: 1.5;
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: #fff;
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 52%, transparent);
+}
+
+.impact-chip button {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 10.5px;
+  transition: background 0.14s ease;
+}
+
+.impact-chip button:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.impact-chip em {
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.impact-chip kbd {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* 被引用的步骤保持全亮并加一圈强调；其余压到背景里 */
+.app[data-impact="1"] .node-step.is-impact-dim {
+  opacity: 0.16;
+}
+
+.app[data-impact="1"] .node-step.is-impact {
+  opacity: 1;
+  background: #fff;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 62%, transparent),
+    0 14px 30px -16px rgba(16, 24, 40, 0.55);
+  z-index: 2;
+}
+
+.app[data-impact="1"] .node-module,
+.app[data-impact="1"] .node-lane {
+  opacity: 0.3;
+}
+
+.app[data-impact="1"] .react-flow__edge {
+  opacity: 0.1;
+}
+
+.app[data-impact="1"] .highway-line,
+.app[data-impact="1"] .highway-spark {
+  opacity: 0.12;
+}
+
+/* ───────────────── 抽屉：反查与影响入口 ───────────────── */
+
+.drawer-usage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(47, 95, 208, 0.05);
+  border: 1px solid rgba(47, 95, 208, 0.14);
+}
+
+.drawer-usage-stat {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.drawer-usage-stat b {
+  font-weight: 500;
+  color: #1d3f8f;
+}
+
+.drawer-impact-btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: #1d3f8f;
+  color: #fff;
+  font-size: 11.5px;
+  transition: background 0.14s ease, transform 0.14s ease;
+}
+
+.drawer-impact-btn:hover {
+  background: #16336f;
+  transform: translateY(-1px);
+}
+
+.drawer-impact-btn kbd {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.usage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.usage-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background 0.13s ease;
+}
+
+.usage-row:hover {
+  background: rgba(16, 24, 40, 0.045);
+}
+
+.usage-mod {
+  flex: none;
+  min-width: 26px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.7;
+  padding: 0 3px;
+  border-radius: 4px;
+  color: color-mix(in srgb, var(--accent) 82%, #000 12%);
+  background: color-mix(in srgb, var(--accent) 13%, white);
+}
+
+.usage-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.usage-main b {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usage-main em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usage-go {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+@media (max-width: 1180px) {
+  .impact-chip-stat {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .impact-chip {
+    max-width: 42vw;
+  }
+
+  .impact-chip-mods {
+    display: none;
+  }
+}

@@ -1,4 +1,4 @@
-import type { DevObject, ModuleId, Process, Step, StepKind } from './types'
+import type { DevObject, ModuleId, Process, SapModule, Step, StepKind } from './types'
 import { modules, moduleById, highways } from './modules'
 import { processes } from './processes'
 import { sdSteps, fiSteps, pricingSteps, creditSteps } from './steps'
@@ -94,6 +94,41 @@ export function objectsOfStep(stepId: string): DevObject[] {
   const step = stepById[stepId]
   if (!step) return []
   return step.objectIds.map((id) => objectById[id]).filter(Boolean)
+}
+
+export type ObjectUsage = {
+  step: Step
+  process: Process
+  module: SapModule
+}
+
+/**
+ * 反查索引：对象 → 引用它的「流程 + 步骤」实例。
+ * 同一对象被同一步骤的多个流程实例引用时会有多条，这是有意的：
+ * 每一条都是它在画布上的一个落位。
+ */
+export const usagesOfObject: Record<string, ObjectUsage[]> = (() => {
+  const map: Record<string, ObjectUsage[]> = {}
+  for (const s of allSteps) {
+    if (s.objectIds.length === 0) continue
+    for (const p of processesOfStep[s.id] ?? []) {
+      const m = moduleById[p.moduleId]
+      if (!m) continue
+      for (const oid of s.objectIds) (map[oid] ||= []).push({ step: s, process: p, module: m })
+    }
+  }
+  return map
+})()
+
+export function summarizeUsage(objectId: string) {
+  const list = usagesOfObject[objectId] ?? []
+  return {
+    list,
+    stepCount: new Set(list.map((u) => u.step.id)).size,
+    processCount: new Set(list.map((u) => u.process.id)).size,
+    moduleCount: new Set(list.map((u) => u.module.id)).size,
+    moduleIds: [...new Set(list.map((u) => u.module.id))],
+  }
 }
 
 export const KIND_LABEL: Record<StepKind, string> = {

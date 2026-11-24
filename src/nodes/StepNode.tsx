@@ -13,11 +13,13 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
   const hoveredStepId = useViewStore((s) => s.hover?.stepId ?? null)
   const hoverStep = useViewStore((s) => s.hoverStep)
   const scheduleHide = useViewStore((s) => s.scheduleHide)
+  const impactId = useViewStore((s) => s.impactObjectId)
   const { goStep } = useNavigate()
 
   const borrowed = home.id !== m.id
   const linked = hoveredStepId === step.id
   const soft = Boolean(focusedProcess) && focusedProcess !== process.id
+  const impact = impactId ? step.objectIds.includes(impactId) : null
 
   return (
     <div
@@ -25,6 +27,8 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
         'node-step',
         linked && 'is-linked',
         soft && 'is-soft',
+        impact === true && 'is-impact',
+        impact === false && 'is-impact-dim',
       )}
       data-kind={step.kind}
       style={
@@ -37,7 +41,14 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
       }
       onMouseEnter={(e) => {
         const r = e.currentTarget.getBoundingClientRect()
-        hoverStep({ stepId: step.id, processId: process.id, x: r.right, y: r.top })
+        hoverStep({
+          stepId: step.id,
+          processId: process.id,
+          x: r.right,
+          y: r.top,
+          w: r.width,
+          h: r.height,
+        })
       }}
       onMouseLeave={scheduleHide}
       onClick={() => goStep(process.id, step.id)}

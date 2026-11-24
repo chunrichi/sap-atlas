@@ -42,8 +42,13 @@ export function toHash(route: Route): string {
  * 由导航动作直接写 hash —— 不从 store 反推。
  * 从 store 反推会踩到「首帧 store 还是空的」和 StrictMode 双跑 effect，
  * 结果是深链刚打开就被写回 #/。
+ *
+ * mode='push' 时产生历史记录，浏览器后退才能逐级返回；
+ * 从 hash/popstate 恢复视图时必须用 'replace'，否则会自己push自己。
  */
-export function writeHash(route: Route) {
+export function writeHash(route: Route, mode: 'replace' | 'push' = 'replace') {
   const h = toHash(route)
-  if (window.location.hash !== h) window.history.replaceState(null, '', h)
+  if (window.location.hash === h) return
+  if (mode === 'push') window.history.pushState(null, '', h)
+  else window.history.replaceState(null, '', h)
 }

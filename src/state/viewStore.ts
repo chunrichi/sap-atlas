@@ -4,8 +4,13 @@ import type { ModuleId } from '../data/types'
 export type HoverInfo = {
   stepId: string
   processId: string
+  /** 源卡片右边缘（屏幕坐标） */
   x: number
+  /** 源卡片上边缘 */
   y: number
+  /** 源卡片宽高：用来判断左右哪边放得下浮层 */
+  w: number
+  h: number
 }
 
 type ViewState = {
@@ -17,6 +22,8 @@ type ViewState = {
   selectedStepId: string | null
   hover: HoverInfo | null
   objectId: string | null
+  /** 影响面模式：高亮所有引用该对象的步骤 */
+  impactObjectId: string | null
   searchOpen: boolean
   /** 端到端主线是否展开 */
   flowOpen: boolean
@@ -35,6 +42,7 @@ type ViewState = {
   scheduleHide: () => void
   hideNow: () => void
   openObject: (id: string) => void
+  setImpactObject: (id: string | null) => void
   setSearchOpen: (v: boolean) => void
   setFlowOpen: (v: boolean) => void
   setFlowId: (id: string) => void
@@ -53,6 +61,7 @@ export const useViewStore = create<ViewState>((set, get) => ({
   selectedStepId: null,
   hover: null,
   objectId: null,
+  impactObjectId: null,
   searchOpen: false,
   flowOpen: false,
   flowId: 'flow.p2c',
@@ -91,6 +100,8 @@ export const useViewStore = create<ViewState>((set, get) => ({
     set({ hover: null })
   },
   openObject: (id) => set({ objectId: id }),
+  // 进入影响面时清掉悬停：否则残留的浮层会挡住高亮出来的步骤
+  setImpactObject: (id) => set({ impactObjectId: id, hover: id ? null : get().hover }),
   setSearchOpen: (v) => set({ searchOpen: v }),
   setFlowOpen: (v) => set({ flowOpen: v }),
   setFlowId: (id) => set({ flowId: id }),
@@ -103,5 +114,6 @@ export const useViewStore = create<ViewState>((set, get) => ({
       selectedStepId: null,
       hover: null,
       objectId: null,
+      impactObjectId: null,
     }),
 }))
