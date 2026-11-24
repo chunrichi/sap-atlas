@@ -75,6 +75,37 @@ export const endToEndFlows: EndToEndFlow[] = [
       },
     ],
   },
+  {
+    id: 'flow.returns',
+    name: '退货闭环',
+    goal: '主线不是永远向前：货卖出去又回来时，账要能退回去，而且不留尾巴。',
+    modules: 'SD → FI',
+    phases: [
+      {
+        id: 'trigger',
+        name: '触发',
+        beats: [
+          { stepId: 'sd.o2c.billing', processId: 'sd.o2c', note: '原发票是退货的依据：退哪张、退多少' },
+        ],
+      },
+      {
+        id: 'reverse',
+        name: '退货与冲减',
+        beats: [
+          { stepId: 'sd.o2c.return', processId: 'sd.o2c', note: '退货订单 + 退货收货，库存回补' },
+          { stepId: 'sd.o2c.credit-memo', processId: 'sd.o2c', note: '贷项凭证冲减应收与收入' },
+        ],
+      },
+      {
+        id: 'settle',
+        name: '财务收尾',
+        beats: [
+          { stepId: 'sd.o2c.billing-post', processId: 'sd.o2c', note: '贷项凭证过账：借贷方向与原发票相反' },
+          { stepId: 'fi.ar.aging', processId: 'fi.ar', note: '应收回到干净余额，账龄重算' },
+        ],
+      },
+    ],
+  },
 ]
 
 export const flowById = Object.fromEntries(endToEndFlows.map((f) => [f.id, f]))

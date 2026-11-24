@@ -48,7 +48,7 @@ export const modules: SapModule[] = [
     soft: '#f2eefd',
     col: 0,
     row: 1,
-    status: 'planned',
+    status: 'active',
   },
   {
     id: 'co',
@@ -59,7 +59,7 @@ export const modules: SapModule[] = [
     soft: '#fdf0f3',
     col: 1,
     row: 1,
-    status: 'planned',
+    status: 'active',
   },
   {
     id: 'fi',
@@ -84,5 +84,6 @@ export const highways: Array<{ from: ModuleId; to: ModuleId; label: string }> = 
   { from: 'mm', to: 'pp', label: '原料入库 → 生产领料' },
   { from: 'pp', to: 'sd', label: '成品入库 → 可售库存' },
   { from: 'sd', to: 'fi', label: '开票 → 应收' },
-  { from: 'mm', to: 'wm', label: '收货 → 库存' },
+  { from: 'mm', to: 'wm', label: '收货 → 上架' },
+  { from: 'pp', to: 'co', label: '订单结算 → 成本差异' },
 ]

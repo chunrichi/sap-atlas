@@ -20,6 +20,7 @@ type ViewState = {
   searchOpen: boolean
   /** 端到端主线是否展开 */
   flowOpen: boolean
+  flowId: string
   /** 导航动画结束的时间戳：动画途中会短暂经过 L0，不能据此清焦点 */
   navUntil: number
 
@@ -36,6 +37,7 @@ type ViewState = {
   openObject: (id: string) => void
   setSearchOpen: (v: boolean) => void
   setFlowOpen: (v: boolean) => void
+  setFlowId: (id: string) => void
   markNav: (ms: number) => void
   closeObject: () => void
   reset: () => void
@@ -53,6 +55,7 @@ export const useViewStore = create<ViewState>((set, get) => ({
   objectId: null,
   searchOpen: false,
   flowOpen: false,
+  flowId: 'flow.p2c',
   navUntil: 0,
 
   setLod: (n) => {
@@ -90,6 +93,7 @@ export const useViewStore = create<ViewState>((set, get) => ({
   openObject: (id) => set({ objectId: id }),
   setSearchOpen: (v) => set({ searchOpen: v }),
   setFlowOpen: (v) => set({ flowOpen: v }),
+  setFlowId: (id) => set({ flowId: id }),
   markNav: (ms) => set({ navUntil: Date.now() + ms }),
   closeObject: () => set({ objectId: null }),
   reset: () =>

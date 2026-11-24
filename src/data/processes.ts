@@ -213,6 +213,65 @@ export const processes: Process[] = [
       { from: 'pp.prod.receipt', to: 'pp.prod.settle' },
     ],
   },
+  {
+    id: 'wm.inbound',
+    moduleId: 'wm',
+    name: '入库与上架',
+    goal: '货到了不算完事：得知道它具体在哪个货架的哪一格。',
+    trigger: '收货过账完成，生成转储请求',
+    outcome: '仓位级库存（Quant）更新，可被拣配',
+    lanes: [
+      { stepId: 'mm.p2p.goods-receipt', col: 0, row: 0 },
+      { stepId: 'wm.inbound.tr', col: 1, row: 0 },
+      { stepId: 'wm.inbound.to', col: 2, row: 0 },
+      { stepId: 'wm.inbound.confirm', col: 3, row: 0 },
+    ],
+    edges: [
+      { from: 'mm.p2p.goods-receipt', to: 'wm.inbound.tr', kind: 'system' },
+      { from: 'wm.inbound.tr', to: 'wm.inbound.to' },
+      { from: 'wm.inbound.to', to: 'wm.inbound.confirm' },
+    ],
+  },
+  {
+    id: 'wm.outbound',
+    moduleId: 'wm',
+    name: '出库与拣配',
+    goal: '按交货单把货从正确的仓位取出来，交给发货环节。',
+    trigger: '交货单创建完成',
+    outcome: '待发货库存，等待过账发货',
+    lanes: [
+      { stepId: 'sd.o2c.delivery', col: 0, row: 0 },
+      { stepId: 'wm.outbound.to', col: 1, row: 0 },
+      { stepId: 'wm.outbound.confirm', col: 2, row: 0 },
+      { stepId: 'sd.o2c.goods-issue', col: 3, row: 0 },
+    ],
+    edges: [
+      { from: 'sd.o2c.delivery', to: 'wm.outbound.to' },
+      { from: 'wm.outbound.to', to: 'wm.outbound.confirm' },
+      { from: 'wm.outbound.confirm', to: 'sd.o2c.goods-issue' },
+    ],
+  },
+  {
+    id: 'co.product-cost',
+    moduleId: 'co',
+    name: '产品成本与毛利',
+    goal: '说清楚一件产品该花多少钱、实际花了多少、差在哪。',
+    trigger: '新品定价、年度标准成本更新，或月末结账',
+    outcome: '标准成本 + 差异分类 + 分客户/产品的毛利',
+    lanes: [
+      { stepId: 'co.pc.estimate', col: 0, row: 0 },
+      { stepId: 'co.pc.release', col: 1, row: 0 },
+      { stepId: 'pp.prod.settle', col: 2, row: 0 },
+      { stepId: 'co.pc.variance', col: 3, row: 0 },
+      { stepId: 'co.pc.copa', col: 4, row: 0 },
+    ],
+    edges: [
+      { from: 'co.pc.estimate', to: 'co.pc.release' },
+      { from: 'co.pc.release', to: 'pp.prod.settle' },
+      { from: 'pp.prod.settle', to: 'co.pc.variance' },
+      { from: 'co.pc.variance', to: 'co.pc.copa' },
+    ],
+  },
 ]
 
 export const processById = Object.fromEntries(processes.map((p) => [p.id, p]))

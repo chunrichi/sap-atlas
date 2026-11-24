@@ -25,6 +25,8 @@ export type StepNodeData = {
   step: Step
   process: Process
   module: SapModule
+  /** 步骤「原属」模块：由 id 前缀推导（sd. / mm. / pp. / fi. / wm. / co.） */
+  home: SapModule
   order: number
   objectCount: number
   alsoIn: string[]
@@ -81,6 +83,8 @@ export function buildNodes(): AnyNode[] {
         const alsoIn = (processesOfStep[step.id] ?? [])
           .filter((x) => x.id !== p.id)
           .map((x) => `${moduleById[x.moduleId]?.code ?? ''} · ${x.name}`)
+        // 借来的步骤保留原模块的颜色：一眼能看出「这条不是本模块的活」
+        const home = moduleById[step.id.split('.')[0] as ModuleId] ?? m
         nodes.push({
           id: `s:${p.id}::${step.id}`,
           type: 'step',
@@ -89,6 +93,7 @@ export function buildNodes(): AnyNode[] {
             step,
             process: p,
             module: m,
+            home,
             order: idx + 1,
             objectCount: step.objectIds.length,
             alsoIn,

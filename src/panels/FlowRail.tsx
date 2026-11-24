@@ -16,7 +16,9 @@ export default function FlowRail() {
   const { goStep } = useNavigate()
   const trackRef = useRef<HTMLDivElement>(null)
 
-  const flow = endToEndFlows[0]
+  const flowId = useViewStore((s) => s.flowId)
+  const setFlowId = useViewStore((s) => s.setFlowId)
+  const flow = endToEndFlows.find((f) => f.id === flowId) ?? endToEndFlows[0]
   const beats = beatsOf(flow)
   const activeIdx = selectedStepId ? beats.findIndex((b) => b.stepId === selectedStepId) : -1
 
@@ -53,7 +55,18 @@ export default function FlowRail() {
     <aside className="flow-rail" aria-label="端到端主线">
       <div className="fr-head">
         <div className="fr-title-wrap">
-          <span className="fr-title">主线 · {flow.name}</span>
+          <div className="fr-tabs">
+            {endToEndFlows.map((f) => (
+              <button
+                type="button"
+                key={f.id}
+                className={cx('fr-tab', f.id === flow.id && 'is-on')}
+                onClick={() => setFlowId(f.id)}
+              >
+                {f.name}
+              </button>
+            ))}
+          </div>
           <span className="fr-sub">
             {flow.modules} · {beats.length} 步
             {activeIdx >= 0 && <b>第 {activeIdx + 1} 步</b>}

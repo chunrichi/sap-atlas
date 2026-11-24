@@ -426,6 +426,15 @@ button {
   color: var(--ink-2);
 }
 
+/* 借用来的步骤：标出它真正属于哪个模块 */
+.step-meta .step-from {
+  margin-right: 5px;
+  font-weight: 700;
+  font-size: 0.86em;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--accent) 78%, #000 12%);
+}
+
 .step-foot,
 .step-kind {
   display: none;
@@ -1991,4 +2000,32 @@ button {
     left: 12px;
     right: 12px;
   }
+}
+
+/* 主线切换 tabs */
+.fr-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: rgba(16, 24, 40, 0.04);
+}
+
+.fr-tab {
+  font-size: 11.5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  color: var(--ink-2);
+  transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.fr-tab:hover {
+  color: var(--ink);
+}
+
+.fr-tab.is-on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(16, 24, 40, 0.12);
 }

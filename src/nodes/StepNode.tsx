@@ -8,13 +8,14 @@ import { useViewStore } from '../state/viewStore'
 import { cx } from '../lib/cx'
 
 function StepNodeView({ data }: NodeProps<StepFlowNode>) {
-  const { step, process, module: m, order, objectCount, alsoIn } = data
+  const { step, process, module: m, home, order, objectCount, alsoIn } = data
   const focusedProcess = useViewStore((s) => s.focusedProcessId)
   const hoveredStepId = useViewStore((s) => s.hover?.stepId ?? null)
   const hoverStep = useViewStore((s) => s.hoverStep)
   const scheduleHide = useViewStore((s) => s.scheduleHide)
   const { goStep } = useNavigate()
 
+  const borrowed = home.id !== m.id
   const linked = hoveredStepId === step.id
   const soft = Boolean(focusedProcess) && focusedProcess !== process.id
 
@@ -30,8 +31,8 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
         {
           width: STEP_W,
           height: STEP_H,
-          '--accent': m.accent,
-          '--soft': m.soft,
+          '--accent': home.accent,
+          '--soft': home.soft,
         } as React.CSSProperties
       }
       onMouseEnter={(e) => {
@@ -52,12 +53,19 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
       <span className="step-order">{order}</span>
       <span className="step-title">{step.name}</span>
       <span className="step-meta">
+        {borrowed && (
+          <em className="step-from" title={`这一步属于 ${home.code} ${home.name}`}>
+            {home.code}
+          </em>
+        )}
         {step.tcode ? <em>{step.tcode}</em> : KIND_LABEL[step.kind]}
-        {step.tcode && step.kind === 'system' ? null : null}
       </span>
       <span className="step-obj">{objectCount} 个开发对象</span>
       {alsoIn.length > 0 && (
-        <span className="step-also" title={`也出现在：${alsoIn.join('、')}`}>
+        <span
+          className="step-also"
+          title={`原属 ${home.code} ${home.name}；也出现在：${alsoIn.join('、')}`}
+        >
           ↗{alsoIn.length}
         </span>
       )}
