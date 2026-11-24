@@ -1,7 +1,8 @@
 import { useViewStore } from '../state/viewStore'
 import { OBJECT_TYPE_LABEL, type DevObject, type ObjectType } from '../data/types'
-import { objectById, processById, processesOfStep, stepById, stepOrderIn } from '../data'
+import { moduleById, objectById, processById, processesOfStep, stepById, stepOrderIn } from '../data'
 import { useNavigate } from '../canvas/hooks/useNavigate'
+import { cx } from '../lib/cx'
 
 const TYPE_ORDER: ObjectType[] = [
   'bapi',
@@ -40,12 +41,15 @@ export default function StepHoverCard() {
   if (!step || !process) return null
 
   const objects = step.objectIds.map((id) => objectById[id]).filter(Boolean)
-  const groups = groupObjects(objects)
+  // 悬停卡只做「预览」：最多 6 个，其余留给抽屉
+  const LIMIT = 5
+  const groups = groupObjects(objects.slice(0, LIMIT))
+  const rest = objects.length - LIMIT
   const others = (processesOfStep[step.id] ?? []).filter((p) => p.id !== process.id)
   const order = stepOrderIn(hover.processId, step.id)
 
   const W = 358
-  const H = Math.min(window.innerHeight * 0.74, 520)
+  const H = Math.min(window.innerHeight * 0.78, 600)
   const left = Math.max(12, Math.min(hover.x + 16, window.innerWidth - W - 16))
   const top = Math.max(14, Math.min(hover.y - 12, window.innerHeight - H - 16))
 
@@ -113,22 +117,28 @@ export default function StepHoverCard() {
             </div>
           ))}
         </div>
+        {rest > 0 && <div className="hc-more">另有 {rest} 个开发对象，点击上方任一项在抽屉里查看</div>}
       </div>
 
       {others.length > 0 && (
         <div className="hc-sec">
           <div className="hc-sec-title">这一步也出现在</div>
           <div className="hc-links">
-            {others.map((p) => (
-              <button
-                type="button"
-                key={p.id}
-                className="link-chip"
-                onClick={() => goProcess(p.id)}
-              >
-                ↗ {p.name}
-              </button>
-            ))}
+            {others.map((p) => {
+              const om = moduleById[p.moduleId]
+              const cross = p.moduleId !== process.moduleId
+              return (
+                <button
+                  type="button"
+                  key={p.id}
+                  className={cx('link-chip', cross && 'is-cross')}
+                  onClick={() => goProcess(p.id)}
+                  title={cross ? `跨模块到 ${om.code} 模块` : '同模块内的另一条流程'}
+                >
+                  {cross && <b>{om.code}</b>} ↗ {p.name}
+                </button>
+              )
+            })}
           </div>
         </div>
       )}

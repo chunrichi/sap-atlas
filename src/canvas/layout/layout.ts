@@ -3,21 +3,21 @@ import { processesByModule } from '../../data'
 
 /** 世界坐标系常量。所有位置都从这里推导，保证缩放时不会漂移。 */
 export const MODULE_W = 2300
-export const MODULE_H = 1780
+export const MODULE_H = 1860
 export const GRID_X = 2600
-export const GRID_Y = 2000
+export const GRID_Y = 2060
 
 export const LANE_X = 80
 export const LANE_Y0 = 190
 export const LANE_W = 2140
-export const LANE_H = 480
-export const LANE_GAP = 500
+export const LANE_H = 520
+export const LANE_GAP = 550
 
-export const STEP_W = 210
-export const STEP_H = 104
+export const STEP_W = 224
+export const STEP_H = 116
 export const STEP_PAD_X = 60
-export const STEP_DX = 250
-export const STEP_DY = 124
+export const STEP_DX = 258
+export const STEP_DY = 132
 export const STEP_Y_TOP = 110
 
 export type Rect = { x: number; y: number; w: number; h: number }

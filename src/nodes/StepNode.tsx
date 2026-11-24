@@ -55,10 +55,7 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
         {step.tcode ? <em>{step.tcode}</em> : KIND_LABEL[step.kind]}
         {step.tcode && step.kind === 'system' ? null : null}
       </span>
-      <span className="step-foot">
-        <span className="step-kind">{KIND_LABEL[step.kind]}</span>
-        <span className="step-obj">{objectCount} 对象</span>
-      </span>
+      <span className="step-obj">{objectCount} 个开发对象</span>
       {alsoIn.length > 0 && (
         <span className="step-also" title={`也出现在：${alsoIn.join('、')}`}>
           ↗{alsoIn.length}

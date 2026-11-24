@@ -15,7 +15,7 @@ export const modules: SapModule[] = [
     soft: '#eaf7f4',
     col: 0,
     row: 0,
-    status: 'planned',
+    status: 'active',
   },
   {
     id: 'pp',

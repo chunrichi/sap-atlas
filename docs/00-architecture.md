@@ -197,7 +197,7 @@ Flow.nodeRefs ──────────────┘   （跨模块端到
 
 设计原则：**内容与引擎彻底分离**。`src/data` 是资产（长期维护、可贡献），其余是代码（可替换）。
 
-下面是 M1 落地后的真实结构（`*` 表示后续会扩展）：
+下面是 M2 落地后的真实结构（`*` 表示后续会扩展）：
 
 ```
 sap-map/
@@ -220,6 +220,8 @@ sap-map/
     ├── canvas/                     # ★ 画布引擎（与 SAP 业务无关）
     │   ├── MapCanvas.tsx           # React Flow 容器、LOD 同步、MiniMap
     │   ├── Highways.tsx            # 模块间主干「高速路」（世界坐标 SVG）
+    │   ├── GhostLinks.tsx          # 幽灵锚点：同一步骤在其他流程/模块的连线
+    │   ├── ghost.ts                # 步骤实例枚举 + 世界→屏幕换算（纯函数）
     │   ├── layout/
     │   │   └── layout.ts           # 世界坐标常量 + 模块/泳道/步骤矩形计算
     │   ├── lod/
@@ -236,6 +238,8 @@ sap-map/
     │
     ├── panels/                     # 屏幕空间的浮层（不受缩放影响）
     │   ├── Hud.tsx                 # 品牌、面包屑、层级指示、图例
+    │   ├── CommandPalette.tsx      # ⌘K 全局搜索（步骤/流程/开发对象）
+    │   ├── GhostCompass.tsx        # 视口外幽灵锚点的方向标
     │   ├── StepHoverCard.tsx       # ★ 悬停卡片：顾问视角 + 开发对象清单
     │   ├── ObjectDrawer.tsx        # 右侧抽屉：开发视角
     │   └── CodeBlock.tsx           # ABAP / HTTP 代码高亮
@@ -243,14 +247,16 @@ sap-map/
     ├── data/                       # ★ 知识库本体（内容资产）
     │   ├── types.ts                # 实体定义，全项目唯一事实源
     │   ├── modules.ts              # 6 个模块 + 模块间主干
-    │   ├── processes.ts            # 流程定义：col/row 手工布局 + 边
+    │   ├── processes.ts            # 7 条流程：col/row 手工布局 + 边（含 alt 分支）
     │   ├── steps/
-    │   │   └── index.ts            # 全部步骤（按模块分段）
+    │   │   ├── index.ts            # SD + FI 应收 + 定价 + 信用
+    │   │   └── mm.ts               # MM 采购/库存 + FI 应付
     │   ├── objects/
     │   │   ├── abap-api.ts         # BAPI / 函数模块
     │   │   ├── enhancement.ts      # BAdI / User Exit / 例程
     │   │   ├── data-model.ts       # 表 / CDS 视图
-    │   │   └── integration.ts      # OData / IDoc
+    │   │   ├── integration.ts      # OData / IDoc
+    │   │   └── mm.ts               # 采购与库存的开发对象
     │   ├── snippets.ts             # 示例代码
     │   └── index.ts                # 汇总、反向索引、内容自检
     │
@@ -260,8 +266,12 @@ sap-map/
     ├── state/
     │   └── viewStore.ts            # zustand：LOD / 焦点 / 悬停 / 抽屉
     │
+    ├── app/
+    │   └── hooks/useHashRoute.ts   # hash ↔ 视图（GitHub Pages 友好）
+    │
     ├── lib/
     │   ├── cx.ts
+    │   ├── route.ts                # 路由解析 / 生成 / 写入
     │   └── highlight.ts            # 轻量 ABAP 词法高亮（无外部依赖）
     │
     └── styles/
@@ -279,7 +289,7 @@ sap-map/
 |---|---|
 | `data/` 与 `canvas/` 平级、互不依赖 | 换渲染引擎不碰内容；换内容不碰引擎。未来可把 `data/` 直接给 AI 检索用 |
 | `steps/` 独立于 `processes/` | 支撑"网状重复"：流程只存 `stepId` 引用，内容单点维护 |
-| `objects/` 按「对象族」分文件 | M1 时 4 个文件（abap-api / enhancement / data-model / integration）比 30 个小文件更好维护；超过 60 个对象再按类型拆目录 |
+| `objects/` 按「对象族」分文件 | 5 个文件（abap-api / enhancement / data-model / integration / mm）比 67 个小文件好维护；对象再多可按类型拆目录 |
 | `canvas/lod/` 单独成目录 | LOD 是本项目的"心脏逻辑"，值得独立文件与集中阈值配置 |
 | `graph/` 与 `canvas/` 分离 | `graph` 是纯函数（可测试），`canvas` 是 React 组件（有副作用） |
 | `docs/` 而不是注释 | 内容贡献者不该读代码；文档是协作入口 |
@@ -355,11 +365,28 @@ sap-map/
 |---|---|---|
 | **M0 骨架**（✅ 已完成） | 目录 + 文档 + 类型定义 | `npm run dev` 能起，内容自检可用 |
 | **M1 垂直切片**（✅ 已完成） | SD 三条流程（O2C / 定价 / 信用）+ FI 应收，打通 L0→L3 | 四级缩放、泳道下钻、悬停出对象、抽屉看代码、跨流程互跳 |
-| **M2 网状** | 加入 MM/P2P，补 alt 异常分支与幽灵锚点 | 同一 `goods-issue` 步骤在 SD 与 FI 都可见并互跳；搜索 ⌘K |
-| **M3 广度与打磨** | 补齐 FI/CO/PP/QM，搜索、MiniMap、动效调优 | 首屏 < 1.5s，L2 交互 60fps |
-| **M4 发布** | GitHub Pages + 深链 + OG 图 | 子路径部署无 404 |
+| **M2 网状**（✅ 已完成） | 接入 MM（P2P / 库存）与 FI 应付；补 alt 异常分支、幽灵锚点、⌘K 搜索、hash 深链 | 同一 `goods-issue` 在 SD 与 MM 都可见并互跳；任一深链可分享、刷新不丢 |
+| **M3 广度** | 补齐 PP / WM / CO 主干；跨模块 end-to-end 流（`data/flows.ts`） | 从 PO 到收款的完整链路可从头走到尾 |
+| **M4 发布** | GitHub Pages + OG 图 + 内容校验进 CI | 子路径部署无 404 |
 
-**建议 M1 只做一条线**。这个产品最容易死在"想一次画完整个 SAP"——先让一条流程好看、好用、有洞察，再横向复制。
+**一条经验**：这个产品最容易死在"想一次画完整个 SAP"。先让一条流程好看、好用、有洞察，再横向复制——M1/M2 就是按这个顺序做的。
+
+---
+
+## 9.1 M2 新增的三件事
+
+**幽灵锚点（Ghost Anchor）**
+悬停或选中一个步骤时，把它在其他流程/模块里的落位连出来。落位在视口内的画虚线 + 模块徽标；落在视口外的收进右下角方向标，点一下直接飞过去。它把"内容只有一份、位置有很多处"这件事变成了看得见的东西。
+
+**⌘K 全局搜索**
+一次搜索覆盖三类实体：步骤（名称 / 事务码 / 业务意图）、流程（名称 / 目标）、开发对象（技术名 / 标题 / 用途）。事务码命中加权最高——开发者的真实输入往往是 `MIGO`、`MIRO` 这种短码。
+
+**hash 深链**
+`#/m/mm` · `#/p/mm.p2p` · `#/s/mm.p2p/mm.p2p.goods-receipt`。
+用 hash 而不是 history：GitHub Pages 是静态托管，history 路由刷新子路径会 404。
+写入用 `history.replaceState`（不产生历史记录、不触发 hashchange），读取监听 `hashchange`——单向流动，避免来回打架。
+
+> 踩过的坑：一开始用「store → hash」反推，结果首帧 store 还是空的，深链刚打开就被写回 `#/`；StrictMode 双跑 effect 会让它更严重。改成导航动作里直接写 hash 才稳。
 
 ---
 
@@ -380,6 +407,6 @@ npm run typecheck  # 只做类型检查
 ## 11. 发布注意（暂不启用）
 
 - `vite.config.ts`：`base: './'`（或用仓库名 `/sap-map/`）
-- 路由用 **hash**（`#/sd/o2c`），避免 GitHub Pages 深链 404
+- 路由已用 **hash**（`#/p/mm.p2p`），避免 GitHub Pages 深链 404
 - 全部数据静态内联，无后端、无 API key
 - 部署产物 < 2MB（代码高亮按需加载）

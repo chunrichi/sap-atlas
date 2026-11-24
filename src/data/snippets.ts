@@ -353,6 +353,235 @@ Authorization: Bearer <token>`,
       '大数据量别用 OData 翻页硬拉，改用 CDS 抽取或复制工具。',
     ],
   },
+  {
+    id: 'snip.po-create',
+    lang: 'abap',
+    title: '用 BAPI 创建采购订单',
+    body: `DATA: ls_header  TYPE bapimepoheader,
+      ls_headerx TYPE bapimepoheaderx,
+      ls_item    TYPE bapimepoitem,
+      ls_itemx   TYPE bapimepoitemx,
+      ls_account TYPE bapimepoaccount,
+      lt_items   TYPE TABLE OF bapimepoitem,
+      lt_itemsx  TYPE TABLE OF bapimepoitemx,
+      lt_return  TYPE TABLE OF bapiret2,
+      lv_po      TYPE bapimepoheader-po_number.
+
+ls_header-comp_code   = '1000'.
+ls_header-vendor      = '0000100234'.
+ls_header-purch_org   = '1000'.
+ls_header-pur_group   = '001'.
+ls_header-doc_type    = 'NB'.
+ls_headerx-comp_code  = abap_true.
+ls_headerx-vendor     = abap_true.
+ls_headerx-purch_org  = abap_true.
+ls_headerx-pur_group  = abap_true.
+ls_headerx-doc_type   = abap_true.
+
+ls_item-plant      = '1000'.
+ls_item-material   = 'MAT-1001'.
+ls_item-quantity   = 100.
+ls_item-po_unit    = 'PC'.
+ls_item-net_price  = '12.50'.
+ls_item-item_cat   = '0'.        " 0 = 标准（库存采购）
+ls_item-acctasscat = ''.         " 库存采购必须为空，K 类才填
+ls_itemx-plant      = abap_true.
+ls_itemx-material   = abap_true.
+ls_itemx-quantity   = abap_true.
+ls_itemx-po_unit    = abap_true.
+ls_itemx-net_price  = abap_true.
+ls_itemx-item_cat   = abap_true.
+APPEND ls_item  TO lt_items.
+APPEND ls_itemx TO lt_itemsx.
+
+CALL FUNCTION 'BAPI_PO_CREATE1'
+  EXPORTING
+    poheader  = ls_header
+    poheaderx = ls_headerx
+  IMPORTING
+    exppurchaseorder = lv_po
+  TABLES
+    return    = lt_return
+    poitem    = lt_items
+    poitemx   = lt_itemsx.
+
+" 必须自己判错 + 自己提交，缺一不可
+READ TABLE lt_return TRANSPORTING NO FIELDS
+  WITH KEY type = 'E'.
+IF sy-subrc = 0.
+  CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+ELSE.
+  CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+    EXPORTING wait = abap_true.
+ENDIF.`,
+    notes: [
+      '所有 X 结构必须与数据字段成对打标记，漏一个该字段就会被静默忽略 —— 这是本 BAPI 最高频的问题。',
+      '库存采购（item_cat = 0）不能带科目分配；费用采购（K）必须带 POACCOUNT，且 acctasscat 不能为空。',
+      'BAPI 不提交事务，必须显式 COMMIT；失败时用 ROLLBACK，否则会留下编号空洞。',
+    ],
+  },
+  {
+    id: 'snip.gr-post',
+    lang: 'abap',
+    title: '按采购订单收货过账',
+    body: `DATA: ls_header TYPE bapi2017_gm_head_01,
+      ls_code   TYPE bapi2017_gm_code,
+      ls_item   TYPE bapi2017_gm_item_create,
+      lt_items  TYPE TABLE OF bapi2017_gm_item_create,
+      lt_return TYPE TABLE OF bapiret2,
+      lv_mblnr  TYPE bapi2017_gm_head_ret-mat_doc,
+      lv_year   TYPE bapi2017_gm_head_ret-doc_year.
+
+ls_code-gm_code = '01'.          " 01 = 收货
+ls_header-pstng_date = sy-datum.
+ls_header-doc_date   = sy-datum.
+ls_header-ref_doc_no = 'GR-2026-0042'.
+
+ls_item-material    = 'MAT-1001'.
+ls_item-plant       = '1000'.
+ls_item-stge_loc    = '0001'.
+ls_item-move_type   = '101'.     " 必须与 gm_code 01 匹配
+ls_item-entry_qnt   = 100.
+ls_item-entry_uom   = 'PC'.
+ls_item-po_number   = '4500001234'.
+ls_item-po_item     = '00010'.
+ls_item-item_text   = '按 PO 收货'.
+APPEND ls_item TO lt_items.
+
+CALL FUNCTION 'BAPI_GOODSMVT_CREATE'
+  EXPORTING
+    goodsmvt_header  = ls_header
+    goodsmvt_code    = ls_code
+  IMPORTING
+    goodsmvt_headret = DATA(ls_ret)
+  TABLES
+    goodsmvt_item    = lt_items
+    return           = lt_return.
+
+" BAPI 对业务错误常返回空 return，必须再看凭证号
+IF ls_ret-mat_doc IS INITIAL.
+  CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+ELSE.
+  CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+    EXPORTING wait = abap_true.
+ENDIF.`,
+    notes: [
+      'gm_code 与移动类型必须匹配（01↔101、03↔261、04↔311），配错不报错但会过出语义错误的凭证。',
+      '判断成功不要只看 RETURN，业务错误时 RETURN 可能为空 —— 要同时校验 MAT_DOC 是否为空。',
+      '序列号管理物料必须填 GOODSMVT_SERIALNUMBER，漏填会生成部分行，需先冲销再重做。',
+    ],
+  },
+  {
+    id: 'snip.iv-post',
+    lang: 'abap',
+    title: '创建供应商发票（三单匹配）',
+    body: `DATA: ls_header TYPE bapi_incinv_headers,
+      ls_item   TYPE bapi_incinv_create_item,
+      lt_items  TYPE TABLE OF bapi_incinv_create_item,
+      lt_return TYPE TABLE OF bapiret2,
+      lv_inv    TYPE bapi_incinv_fld-inv_doc_no.
+
+ls_header-invoice_ind  = 'X'.      " 做发票校验（非贷项）
+ls_header-doc_type     = 'RE'.
+ls_header-doc_date     = sy-datum.
+ls_header-pstng_date   = sy-datum.
+ls_header-comp_code    = '1000'.
+ls_header-vendor_no    = '0000100234'.
+ls_header-currency     = 'CNY'.
+ls_header-calc_tax_ind = 'X'.      " 由系统按税码算税
+
+ls_item-invoice_item   = '000001'.
+ls_item-po_number      = '4500001234'.
+ls_item-po_item        = '00010'.
+ls_item-item_amount    = '1250.00'.
+ls_item-quantity       = 100.
+ls_item-po_unit        = 'PC'.
+ls_item-tax_code       = 'J1'.
+ls_item-taxjurcode     = '00'.
+APPEND ls_item TO lt_items.
+
+CALL FUNCTION 'BAPI_INCOMINGINVOICE_CREATE'
+  EXPORTING
+    headerdata       = ls_header
+    calc_tax_ind     = 'X'
+  IMPORTING
+    invoicedocnumber = lv_inv
+  TABLES
+    itemdata         = lt_items
+    return           = lt_return.
+
+" 关键：区分「建成」与「建成但冻结」
+LOOP AT lt_return INTO DATA(ls_ret)
+     WHERE type CA 'EAW'.
+  WRITE: / ls_ret-type, ls_ret-message.
+ENDLOOP.`,
+    notes: [
+      '超出容差时 BAPI 返回 W 而非 E，发票「建成但被冻结」—— 只判 E 会漏掉，生产事故多出于此。',
+      '开 calc_tax_ind 才能让系统按税码算税；否则必须自己把税额算准传进来。',
+      '发票冻结后要用 BAPI_INCOMINGINVOICE_RELEASE 释放，不是改字段。',
+    ],
+  },
+  {
+    id: 'snip.po-badi',
+    lang: 'abap',
+    title: 'ME_PROCESS_PO_CUST：PO 行项目校验',
+    body: `METHOD if_ex_me_process_po_cust~check.
+  DATA: lo_item TYPE REF TO if_purchase_order_item_mm.
+
+  " 只处理标准行项目，避免影响服务/限价类项目
+  lo_item = im_item.
+  IF lo_item->get_data( )-item_cat <> '0'.
+    RETURN.
+  ENDIF.
+
+  DATA(ls_data) = lo_item->get_data( ).
+
+  " 业务规则：单行金额超过 50 万必须走审批
+  IF ls_data-net_value > 500000.
+    " 必须用带消息的异常，直接 RETURN 不会阻止保存
+    mo_message->add_message(
+      exporting
+        msgty = 'E'
+        msgid = 'ZMM'
+        msgno = '001'
+        msgv1 = ls_data-po_number
+        msgv2 = ls_data-po_item ).
+  ENDIF.
+ENDMETHOD.`,
+    notes: [
+      'CHECK 方法里阻止保存必须用 MESSAGE/异常，RETURN 只是跳过逻辑，单据照样能存。',
+      '不要在 POST 方法里再调 BAPI 建同类单据，会递归触发增强。',
+      'im_item 是对象引用，改值要用 setter 并最后 commit，直接改结构不生效。',
+    ],
+  },
+  {
+    id: 'snip.migo-badi',
+    lang: 'abap',
+    title: 'MB_MIGO_BADI：收货行项目校验',
+    body: `METHOD if_ex_mb_migo_badi~check_item.
+  " is_goitem 是 MIGO 的行项目结构，字段极多
+  IF is_goitem-bwart <> '101'.
+    RETURN.
+  ENDIF.
+
+  " 业务规则：质检物料必须放到质检库存地点 0002
+  SELECT SINGLE lgort FROM mard
+    INTO @DATA(lv_dummy)
+    WHERE matnr = @is_goitem-matnr
+      AND werks = @is_goitem-werks
+      AND lgort = '0002'.
+
+  IF is_goitem-lgort <> '0002'
+     AND is_goitem-pruefart IS NOT INITIAL.
+    e_message = '质检物料必须收到质检库存地点 0002'.  " 返回消息即可阻止
+  ENDIF.
+ENDMETHOD.`,
+    notes: [
+      'CHECK_ITEM 通过导出参数 E_MESSAGE 返回错误即可阻止过账，不需要抛异常。',
+      '这个 BAdI 只在 MIGO 事务内触发；老程序走 MB_CREATE_GOODS_MOVEMENT 不经过它。',
+      '不要在 POST_DOCUMENT 里 COMMIT WORK，会导致凭证号跳号。',
+    ],
+  },
 ]
 
 export const snippetById = Object.fromEntries(snippets.map((s) => [s.id, s]))

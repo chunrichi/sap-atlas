@@ -10,13 +10,20 @@ import {
   maxRowOf,
   stepRect,
   stepYBase,
+  STEP_DX,
+  STEP_H,
+  STEP_PAD_X,
+  STEP_W,
+  STEP_DY,
 } from '../layout/layout'
 import type { Rect } from '../layout/layout'
 import { useViewStore } from '../../state/viewStore'
+import { writeHash } from '../../lib/route'
 
 export const ZOOM = {
   module: 0.42,
-  process: 0.9,
+  /** 流程视图的上下限：下限要高于 L2 阈值，否则会掉回 L1 看不到标题 */
+  process: { min: 0.64, max: 0.94 },
   step: 1.28,
 } as const
 
@@ -37,30 +44,29 @@ function viewportFor(rect: Rect, zoom: number, vw: number, vh: number) {
   }
 }
 
-function pointFor(x: number, y: number, zoom: number, vw: number, vh: number) {
-  return { x: vw / 2 - x * zoom, y: vh / 2 - y * zoom, zoom }
-}
-
 export function useNavigate() {
   const rf = useReactFlow()
   const focusModule = useViewStore((s) => s.focusModule)
   const focusProcess = useViewStore((s) => s.focusProcess)
   const selectStep = useViewStore((s) => s.selectStep)
   const reset = useViewStore((s) => s.reset)
+  const markNav = useViewStore((s) => s.markNav)
 
   const fly = useCallback(
     (vp: { x: number; y: number; zoom: number }, duration = 700) => {
       const token = ++navToken
+      markNav(duration + 400)
       void rf.setViewport(vp, { duration })
       // 兜底：动画被中断（标签页切到后台等）时也要落到目标位置
       window.setTimeout(() => {
         if (navToken === token) void rf.setViewport(vp)
       }, duration + 160)
     },
-    [rf],
+    [markNav, rf],
   )
 
   const goHome = useCallback(() => {
+    writeHash({ kind: 'home' })
     reset()
     const { w, h } = measure()
     fly(homeViewport(w, h), 800)
@@ -68,6 +74,7 @@ export function useNavigate() {
 
   const goModule = useCallback(
     (id: ModuleId) => {
+      writeHash({ kind: 'module', moduleId: id })
       focusModule(id)
       const m = moduleById[id]
       if (!m) return
@@ -81,16 +88,29 @@ export function useNavigate() {
     (id: string) => {
       const p = processById[id]
       if (!p) return
+      writeHash({ kind: 'process', processId: id })
+      focusModule(p.moduleId)
       focusProcess(id)
       const m = moduleById[p.moduleId]
       const lane = laneRect(m, laneIndexOf(p.moduleId, id))
       const { w, h } = measure()
-      // 对齐到泳道前段：点流程时想看的是「从头开始」
-      const anchorX = lane.x + Math.min(lane.w / 2, 720)
-      const anchorY = lane.y + lane.h / 2
-      fly(pointFor(anchorX, anchorY, ZOOM.process, w, h))
+      // 让整条流程一次看全：按内容宽高算缩放，而不是固定倍率
+      const maxCol = p.lanes.reduce((n, l) => Math.max(n, l.col), 0)
+      const maxRow = Math.max(maxRowOf(p), 0)
+      const contentW = STEP_PAD_X * 2 + maxCol * STEP_DX + STEP_W
+      // 用「卡片带」而不是整个泳道来取景：单行泳道的卡片是垂直居中的，
+      // 按泳道高度算会把内容压到下半屏。
+      const yBase = stepYBase(maxRow)
+      const bandTop = lane.y + yBase - 24
+      const contentH = maxRow * STEP_DY + STEP_H + 48
+      const zoom = Math.max(
+        ZOOM.process.min,
+        Math.min(ZOOM.process.max, Math.min((w - 96) / contentW, (h - 130) / contentH)),
+      )
+      const rect = { x: lane.x, y: bandTop, w: contentW, h: contentH }
+      fly(viewportFor(rect, zoom, w, h), 760)
     },
-    [fly, focusProcess],
+    [fly, focusModule, focusProcess],
   )
 
   const goStep = useCallback(
@@ -102,12 +122,15 @@ export function useNavigate() {
       const lane = laneRect(m, laneIndexOf(p.moduleId, processId))
       const placement = p.lanes.find((l) => l.stepId === stepId)
       if (!placement) return
+      writeHash({ kind: 'step', processId, stepId })
+      focusModule(p.moduleId)
+      focusProcess(processId)
       selectStep(stepId)
       const { w, h } = measure()
       const r = stepRect(lane, placement.col, placement.row, stepYBase(maxRowOf(p)))
       fly(viewportFor(r, ZOOM.step, w, h), 620)
     },
-    [fly, selectStep],
+    [fly, focusProcess, selectStep],
   )
 
   return { goHome, goModule, goProcess, goStep }

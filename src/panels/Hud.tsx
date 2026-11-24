@@ -9,6 +9,7 @@ export default function Hud() {
   const focusedProcessId = useViewStore((s) => s.focusedProcessId)
   const selectedStepId = useViewStore((s) => s.selectedStepId)
   const lod = useViewStore((s) => s.lod)
+  const setSearchOpen = useViewStore((s) => s.setSearchOpen)
   const { goHome, goModule, goProcess } = useNavigate()
 
   const mod = focusedModuleId ? moduleById[focusedModuleId] : null
@@ -62,6 +63,12 @@ export default function Hud() {
             </>
           )}
         </nav>
+
+        <button type="button" className="hud-search" onClick={() => setSearchOpen(true)}>
+          <span aria-hidden>⌕</span>
+          搜索知识库
+          <kbd>⌘K</kbd>
+        </button>
       </header>
 
       <div className="hud-bottom">
@@ -83,11 +90,14 @@ export default function Hud() {
           <span className="legend-item" data-kind="document">
             <i /> 单据
           </span>
+          <span className="legend-item" data-kind="alt">
+            <i /> 异常分支
+          </span>
         </div>
       </div>
 
       <div className="hud-hint">
-        <b>点击模块进入</b> · 滚轮缩放看细节 · 悬停步骤看开发对象
+        <b>点击模块进入</b> · 滚轮缩放看细节 · 悬停步骤看开发对象 · <kbd>⌘K</kbd> 搜索
       </div>
     </>
   )

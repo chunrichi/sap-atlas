@@ -17,6 +17,7 @@ import LaneNode from '../nodes/LaneNode'
 import StepNode from '../nodes/StepNode'
 import FlowEdge from './edges/FlowEdge'
 import Highways from './Highways'
+import GhostLinks from './GhostLinks'
 import { useViewStore } from '../state/viewStore'
 import { lodFromZoom } from './lod/lod.config'
 import { homeViewport } from './layout/layout'
@@ -47,6 +48,18 @@ export default function MapCanvas() {
   useEffect(() => {
     setLod(lodFromZoom(zoom))
   }, [zoom, setLod])
+
+  // 稳定停在 L0 才解除聚焦：否则「飞入模块」动画开头的那几帧会把焦点清掉
+  useEffect(() => {
+    if (lod !== 0) return
+    const t = window.setTimeout(() => {
+      const st = useViewStore.getState()
+      if (st.lod !== 0) return
+      if (Date.now() < st.navUntil) return
+      st.clearFocus()
+    }, 560)
+    return () => window.clearTimeout(t)
+  }, [lod])
 
   useEffect(() => {
     const el = wrapRef.current
@@ -94,6 +107,7 @@ export default function MapCanvas() {
           bgColor="transparent"
         />
         <Highways />
+        <GhostLinks />
         <Controls showInteractive={false} position="bottom-left" />
         <MiniMap
           position="top-right"

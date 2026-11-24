@@ -3,6 +3,12 @@ import type { Process } from './types'
 /**
  * 布局是手工声明的（col / row），不是自动算的。
  * 原因：用户靠空间记忆找东西，位置一旦抖动就迷路。
+ *
+ * 跨模块共用的步骤直接引用同一个 stepId —— 这是「网状」的唯一实现方式：
+ *   sd.o2c.goods-issue   同时出现在 SD 订单到收款 与 MM 库存管理
+ *   mm.p2p.goods-receipt 同时出现在 MM 采购到付款 与 MM 库存管理
+ *   mm.p2p.invoice-verify 同时出现在 MM 采购到付款 与 FI 应付与付款
+ *   fi.ap.payment        同时出现在 MM 采购到付款 与 FI 应付与付款
  */
 export const processes: Process[] = [
   {
@@ -23,6 +29,8 @@ export const processes: Process[] = [
       { stepId: 'sd.o2c.goods-issue', col: 5, row: 1 },
       { stepId: 'sd.o2c.billing', col: 6, row: 1 },
       { stepId: 'sd.o2c.billing-post', col: 7, row: 1 },
+      { stepId: 'sd.o2c.return', col: 6, row: 2 },
+      { stepId: 'sd.o2c.credit-memo', col: 7, row: 2 },
     ],
     edges: [
       { from: 'sd.o2c.inquiry', to: 'sd.o2c.create-order' },
@@ -36,6 +44,8 @@ export const processes: Process[] = [
       { from: 'sd.o2c.picking', to: 'sd.o2c.goods-issue' },
       { from: 'sd.o2c.goods-issue', to: 'sd.o2c.billing' },
       { from: 'sd.o2c.billing', to: 'sd.o2c.billing-post' },
+      { from: 'sd.o2c.billing', to: 'sd.o2c.return', kind: 'alt' },
+      { from: 'sd.o2c.return', to: 'sd.o2c.credit-memo', kind: 'alt' },
     ],
   },
   {
@@ -74,6 +84,72 @@ export const processes: Process[] = [
       { from: 'sd.credit.control-range', to: 'sd.credit.limit' },
       { from: 'sd.credit.limit', to: 'sd.o2c.credit-check' },
       { from: 'sd.o2c.credit-check', to: 'sd.credit.release' },
+    ],
+  },
+  {
+    id: 'mm.p2p',
+    moduleId: 'mm',
+    name: '采购到付款',
+    goal: '把「想买」变成「买到了、钱付对了」：请购、下单、收货、校验发票。',
+    trigger: 'MRP 产生需求，或部门提出请购',
+    outcome: '已入库的物料 + 已确认的应付负债',
+    lanes: [
+      { stepId: 'mm.p2p.requisition', col: 0, row: 1 },
+      { stepId: 'mm.p2p.source', col: 1, row: 0 },
+      { stepId: 'mm.p2p.po', col: 1, row: 1 },
+      { stepId: 'mm.p2p.po-output', col: 2, row: 0 },
+      { stepId: 'mm.p2p.goods-receipt', col: 3, row: 1 },
+      { stepId: 'mm.p2p.invoice-verify', col: 4, row: 1 },
+      { stepId: 'mm.p2p.gr-reversal', col: 4, row: 2 },
+      { stepId: 'fi.ap.payment', col: 5, row: 1 },
+    ],
+    edges: [
+      { from: 'mm.p2p.requisition', to: 'mm.p2p.source', kind: 'system' },
+      { from: 'mm.p2p.requisition', to: 'mm.p2p.po' },
+      { from: 'mm.p2p.source', to: 'mm.p2p.po' },
+      { from: 'mm.p2p.po', to: 'mm.p2p.po-output', kind: 'system' },
+      { from: 'mm.p2p.po', to: 'mm.p2p.goods-receipt' },
+      { from: 'mm.p2p.goods-receipt', to: 'mm.p2p.invoice-verify' },
+      { from: 'mm.p2p.goods-receipt', to: 'mm.p2p.gr-reversal', kind: 'alt' },
+      { from: 'mm.p2p.invoice-verify', to: 'fi.ap.payment' },
+    ],
+  },
+  {
+    id: 'mm.inventory',
+    moduleId: 'mm',
+    name: '库存与物料移动',
+    goal: '守住账实一致：进、出、移、盘，每一次库存变化都留下凭证。',
+    trigger: '收货、发货、转移或盘点',
+    outcome: '与实物一致的库存数量，以及可追溯的物料凭证',
+    lanes: [
+      { stepId: 'mm.p2p.goods-receipt', col: 0, row: 0 },
+      { stepId: 'sd.o2c.goods-issue', col: 1, row: 0 },
+      { stepId: 'mm.inv.transfer', col: 2, row: 0 },
+      { stepId: 'mm.inv.physical', col: 3, row: 0 },
+      { stepId: 'mm.inv.stock-view', col: 4, row: 0 },
+    ],
+    edges: [
+      { from: 'mm.p2p.goods-receipt', to: 'sd.o2c.goods-issue' },
+      { from: 'sd.o2c.goods-issue', to: 'mm.inv.transfer' },
+      { from: 'mm.inv.transfer', to: 'mm.inv.physical' },
+      { from: 'mm.inv.physical', to: 'mm.inv.stock-view' },
+    ],
+  },
+  {
+    id: 'fi.ap',
+    moduleId: 'fi',
+    name: '应付与付款',
+    goal: '把供应商的发票变成应付，再按时、按条件付出去。',
+    trigger: 'MM 发票校验通过，产生应付',
+    outcome: '已清账的应付，或待付清单',
+    lanes: [
+      { stepId: 'mm.p2p.invoice-verify', col: 0, row: 0 },
+      { stepId: 'fi.ap.payment', col: 1, row: 0 },
+      { stepId: 'fi.ap.clearing', col: 2, row: 0 },
+    ],
+    edges: [
+      { from: 'mm.p2p.invoice-verify', to: 'fi.ap.payment' },
+      { from: 'fi.ap.payment', to: 'fi.ap.clearing' },
     ],
   },
   {

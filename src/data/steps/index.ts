@@ -156,6 +156,32 @@ export const sdSteps: Step[] = [
       '开票的同时生成会计凭证：借应收账款，贷收入，贷销项税。这一刻利润表出现收入，资产负债表出现应收 —— 业务单据正式变成财务事实。',
     objectIds: ['table.BKPF', 'table.BSID', 'table.VBRK'],
   },
+  {
+    id: 'sd.o2c.return',
+    name: '退货订单与退货收货',
+    kind: 'human',
+    tcode: 'VA01（RE）',
+    role: '销售内勤 / 仓库',
+    input: '客户退货申请',
+    output: '退货订单 + 退货交货单',
+    intent:
+      '客户退货走「退货订单（凭证类别 RE）→ 退货交货 → 收货」的镜像链路，而不是冲销原订单。收货时用移动类型 651，库存回补的同时冲减销售成本 —— 原订单和原发票都保持原样，只做增量修正。',
+    objectIds: ['table.VBAK', 'table.VBAP', 'bapi.SALESORDER_CREATEFROMDAT2', 'table.MSEG'],
+    note: '退货订单的物料必须带「退货」标识，否则系统会拒绝收货；这是主数据问题，不是配置问题。',
+  },
+  {
+    id: 'sd.o2c.credit-memo',
+    name: '贷项凭证',
+    kind: 'document',
+    tcode: 'VF11',
+    role: '开票员',
+    input: '退货订单 / 价格调整',
+    output: '贷项凭证（VBRK，类别 G2/L2）',
+    intent:
+      '金额上的反向修正：不减少已开票数量，而是用贷项凭证冲减应收。退货用退货订单修数量，价格或折扣错了用贷项凭证修金额 —— 两者不能互相替代。',
+    objectIds: ['bapi.BILLINGDOC_CREATEFROMDATA', 'table.VBRK', 'table.BSID'],
+    note: '贷项凭证过账后同样生成会计凭证，只是借贷方向与发票相反。',
+  },
 ]
 
 export const fiSteps: Step[] = [

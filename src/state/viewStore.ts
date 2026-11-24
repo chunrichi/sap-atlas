@@ -17,8 +17,12 @@ type ViewState = {
   selectedStepId: string | null
   hover: HoverInfo | null
   objectId: string | null
+  searchOpen: boolean
+  /** 导航动画结束的时间戳：动画途中会短暂经过 L0，不能据此清焦点 */
+  navUntil: number
 
   setLod: (n: number) => void
+  clearFocus: () => void
   setSize: (w: number, h: number) => void
   focusModule: (id: ModuleId | null) => void
   focusProcess: (id: string | null) => void
@@ -28,6 +32,8 @@ type ViewState = {
   scheduleHide: () => void
   hideNow: () => void
   openObject: (id: string) => void
+  setSearchOpen: (v: boolean) => void
+  markNav: (ms: number) => void
   closeObject: () => void
   reset: () => void
 }
@@ -42,15 +48,17 @@ export const useViewStore = create<ViewState>((set, get) => ({
   selectedStepId: null,
   hover: null,
   objectId: null,
+  searchOpen: false,
+  navUntil: 0,
 
   setLod: (n) => {
     if (get().lod === n) return
     set({ lod: n })
-    // 缩回全局视图时，自动解除聚焦，避免整屏都是半透明的模块
-    if (n === 0 && get().focusedModuleId) {
-      set({ focusedModuleId: null, focusedProcessId: null, selectedStepId: null })
-    }
   },
+  // 由画布在「稳定处于 L0」时调用：导航动画途中会短暂经过 L0，不能立刻清，
+  // 否则深链刚聚焦就被抹掉。
+  clearFocus: () =>
+    set({ focusedModuleId: null, focusedProcessId: null, selectedStepId: null }),
   setSize: (w, h) => {
     const { size } = get()
     if (size.w === w && size.h === h) return
@@ -76,6 +84,8 @@ export const useViewStore = create<ViewState>((set, get) => ({
     set({ hover: null })
   },
   openObject: (id) => set({ objectId: id }),
+  setSearchOpen: (v) => set({ searchOpen: v }),
+  markNav: (ms) => set({ navUntil: Date.now() + ms }),
   closeObject: () => set({ objectId: null }),
   reset: () =>
     set({

@@ -1,6 +1,6 @@
 import type { Edge, Node } from '@xyflow/react'
 import type { ModuleId, Process, SapModule, Step } from '../data/types'
-import { modules, processes, processesByModule, processesOfStep, stepById } from '../data'
+import { moduleById, modules, processes, processesByModule, processesOfStep, stepById } from '../data'
 import {
   laneRect,
   maxRowOf,
@@ -36,8 +36,11 @@ export type LaneNode = Node<LaneNodeData, 'lane'>
 export type StepFlowNode = Node<StepNodeData, 'step'>
 export type AnyNode = ModuleNode | LaneNode | StepFlowNode
 
-const moduleStepCount = (m: SapModule) =>
-  (processesByModule[m.id] ?? []).reduce((n, p) => n + p.lanes.length, 0)
+const moduleStepCount = (m: SapModule) => {
+  const ids = new Set<string>()
+  for (const p of processesByModule[m.id] ?? []) for (const l of p.lanes) ids.add(l.stepId)
+  return ids.size
+}
 
 export function buildNodes(): AnyNode[] {
   const nodes: AnyNode[] = []
@@ -77,7 +80,7 @@ export function buildNodes(): AnyNode[] {
         const r = stepRect(lane, placement.col, placement.row, yBase)
         const alsoIn = (processesOfStep[step.id] ?? [])
           .filter((x) => x.id !== p.id)
-          .map((x) => x.name)
+          .map((x) => `${moduleById[x.moduleId]?.code ?? ''} · ${x.name}`)
         nodes.push({
           id: `s:${p.id}::${step.id}`,
           type: 'step',
