@@ -6,7 +6,8 @@
   "description": "SAP 多模块业务流程知识地图 — 可缩放的 Canvas 知识库",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run validate && vite build",
+    "validate": "node scripts/validate-content.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },

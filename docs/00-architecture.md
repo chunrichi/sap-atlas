@@ -378,7 +378,7 @@ sap-map/
 | **M2 网状**（✅ 已完成） | 接入 MM（P2P / 库存）与 FI 应付；补 alt 异常分支、幽灵锚点、⌘K 搜索、hash 深链 | 同一 `goods-issue` 在 SD 与 MM 都可见并互跳；任一深链可分享、刷新不丢 |
 | **M3 生产主线**（✅ 已完成） | PP 两条流程（MRP / 生产执行）+ 端到端主线 15 步 | 从预测一路点到收款，「上一步/下一步」能走完整条价值链 |
 | **M4 全模块**（✅ 已完成） | 补 WM / CO；主线扩到两条（计划到收款 / 退货闭环） | 6 个模块全部 active，两条主线都能逐步走完 |
-| **M5 发布** | GitHub Pages + OG 图 + 内容校验进 CI | 子路径部署无 404 |
+| **M5 收尾**（✅ 已完成，未发布） | 校验进构建、框架/内容分包、OG 图与 favicon、README、Pages workflow | 子路径 `localhost:4300/sap-map/` 实测通过 |
 
 **一条经验**：这个产品最容易死在"想一次画完整个 SAP"。先让一条流程好看、好用、有洞察，再横向复制——M1/M2 就是按这个顺序做的。
 
@@ -437,18 +437,34 @@ sap-map/
 ```bash
 npm install
 npm run dev        # 开发：http://localhost:5173
-npm run build      # 产物在 dist/
+npm run validate   # 内容自检（引用完整性 + 主线挂载）
+npm run build      # 先校验再构建，产物在 dist/
 npm run preview    # 本地预览产物
 npm run typecheck  # 只做类型检查
 ```
+
+`npm run build` 会先跑 `validate`：引用断了就不出包。校验脚本用 Vite 自己的 SSR 加载器读 TS
+（`scripts/validate-content.mjs`），不需要 ts-node，也不用为了"能被 Node 跑"牺牲类型。
 
 开发时若内容有引用缺失（步骤指向不存在的对象等），控制台会直接打印清单 —— 见 `src/data/index.ts` 的 `validateContent()`。
 
 ---
 
-## 11. 发布注意（暂不启用）
+## 11. 发布准备（已完成，未上线）
 
-- `vite.config.ts`：`base: './'`（或用仓库名 `/sap-map/`）
-- 路由已用 **hash**（`#/p/mm.p2p`），避免 GitHub Pages 深链 404
-- 全部数据静态内联，无后端、无 API key
-- 部署产物 < 2MB（代码高亮按需加载）
+已经做完的：
+
+- `base: './'`，产物可以放在任意子路径。已用 `python3 -m http.server` 把 `dist/` 挂到 `/sap-map/` 下实测：
+  深链 `#/p/wm.inbound` 直接落到 L2，资源无 404。
+- 路由是 **hash**（`#/p/mm.p2p`），静态托管刷新子路径不会 404。
+- 分包：`react` 63K / `xyflow` 86K / 内容 58K（均为 gzip），改内容只需要重下 58 KB 那个。
+- `index.html` 带 OG/Twitter meta，`public/og.png` 是 1200×630 的分享图。
+- `.github/workflows/deploy-pages.yml` 已就位，但**只有手动触发**（`workflow_dispatch`），push 不会自动上线。
+
+真正上线还差三步（都不影响本地使用）：
+
+1. 在仓库 Settings → Pages 里把 Source 设为 GitHub Actions；
+2. 打开 workflow 里的 `push` 触发器；
+3. 把 `index.html` 的 `og:image` 换成绝对地址（`https://<user>.github.io/<repo>/og.png`），爬虫不认相对路径。
+
+产物 772 KB / gzip 216 KB（含 OG 图），无后端、无 API key、无外部字体。
