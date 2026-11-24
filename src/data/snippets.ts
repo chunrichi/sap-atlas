@@ -582,6 +582,161 @@ ENDMETHOD.`,
       '不要在 POST_DOCUMENT 里 COMMIT WORK，会导致凭证号跳号。',
     ],
   },
+  {
+    id: 'snip.planned-order',
+    lang: 'abap',
+    title: '创建计划订单（带组件）',
+    body: `DATA: ls_head TYPE bapiplaf_i1,
+      ls_item TYPE bapiplaf_i2,
+      lt_item TYPE TABLE OF bapiplaf_i2,
+      lt_ret  TYPE TABLE OF bapiret2,
+      lv_pln  TYPE bapiplaf_e1-plannedorder.
+
+ls_head-material   = 'FG-2001'.
+ls_head-plant      = '1000'.
+ls_head-quantity   = 500.
+ls_head-prod_vers  = '0001'.
+
+" 组件必须自己展开或显式传入，BAPI 不会替你跑 BOM
+ls_item-material   = 'RM-1001'.
+ls_item-plant      = '1000'.
+ls_item-entry_qnt  = 1000.
+APPEND ls_item TO lt_item.
+
+CALL FUNCTION 'BAPI_PLANNEDORDER_CREATE'
+  IMPORTING
+    plannedorder = lv_pln
+  TABLES
+    plannedorder_head = ls_head
+    plannedorder_item = lt_item
+    return            = lt_ret.
+
+IF lv_pln IS INITIAL.
+  CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+ELSE.
+  CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+    EXPORTING wait = abap_true.
+ENDIF.`,
+    notes: [
+      '不传组件时系统不会展开 BOM，后续转换出的生产订单会缺料。',
+      '日期与提前期冲突时只给警告，计划订单可能被排到过去。',
+    ],
+  },
+  {
+    id: 'snip.prodord-create',
+    lang: 'abap',
+    title: '创建生产订单并带回工序与组件',
+    body: `DATA: ls_order TYPE bapi_pp_order_create,
+      lt_ret   TYPE TABLE OF bapiret2,
+      lv_aufnr TYPE bapi_order_key-order_number.
+
+ls_order-material   = 'FG-2001'.
+ls_order-plant      = '1000'.
+ls_order-order_type = 'PP01'.
+ls_order-quantity   = 500.
+ls_order-basic_start_date = sy-datum + 3.
+ls_order-basic_end_date   = sy-datum + 10.
+
+CALL FUNCTION 'BAPI_PRODORD_CREATE'
+  EXPORTING
+    orderdata     = ls_order
+  IMPORTING
+    order_number  = lv_aufnr
+  TABLES
+    return        = lt_ret.
+
+" 建成 ≠ 建成对了：缺 BOM/工艺路线时只给警告
+IF lv_aufnr IS INITIAL.
+  CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+ELSE.
+  CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+    EXPORTING wait = abap_true.
+ENDIF.`,
+    notes: [
+      '订单类型决定结算规则与字段状态，不传时按物料主数据推导，推不出来会建成空单。',
+      '创建阶段不做可用性拦截，缺料要到下达时才报错。',
+    ],
+  },
+  {
+    id: 'snip.prodord-release',
+    lang: 'abap',
+    title: '批量下达生产订单',
+    body: `DATA: lt_numbers TYPE TABLE OF bapi_order_key,
+      lt_detail  TYPE TABLE OF bapi_order_status,
+      lt_ret     TYPE TABLE OF bapiret2,
+      ls_key     LIKE LINE OF lt_numbers.
+
+ls_key-order_number = '1000023456'.
+APPEND ls_key TO lt_numbers.
+APPEND ls_key TO lt_numbers.
+
+CALL FUNCTION 'BAPI_PRODORD_RELEASE'
+  TABLES
+    orders        = lt_numbers
+    detail_return = lt_detail
+    return        = lt_ret.
+
+" 部分成功是常态：逐条判断，不能只看整体返回
+LOOP AT lt_detail INTO DATA(ls_d).
+  IF ls_d-objstatus IS NOT INITIAL.   " 已释放
+    WRITE: / 'OK  ', ls_d-order_number.
+  ELSE.
+    WRITE: / 'FAIL', ls_d-order_number.
+  ENDIF.
+ENDLOOP.
+
+CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+  EXPORTING wait = abap_true.`,
+    notes: [
+      '批量下达必须读 DETAIL_RETURN，整体 RETURN 只反映调用是否成功。',
+      '缺料订单下达失败不会自动建采购申请，仍要回到 MRP 处理。',
+      'COMMIT 要放在循环外，逐条提交会产生大量小事务。',
+    ],
+  },
+  {
+    id: 'snip.confirm',
+    lang: 'abap',
+    title: '工序确认（报工 + 倒冲）',
+    body: `DATA: ls_ticket TYPE bapi_pp_timeticket,
+      ls_gm     TYPE bapi_pp_goods_movement,
+      lt_ticket TYPE TABLE OF bapi_pp_timeticket,
+      lt_gm     TYPE TABLE OF bapi_pp_goods_movement,
+      lt_ret    TYPE TABLE OF bapiret2.
+
+ls_ticket-orderid          = '1000023456'.
+ls_ticket-operation        = '0010'.
+ls_ticket-yield            = 100.
+ls_ticket-scrap            = 2.
+ls_ticket-conf_act_work    = 480.      " 分钟，不是小时
+ls_ticket-postg_date       = sy-datum.
+ls_ticket-plant            = '1000'.
+APPEND ls_ticket TO lt_ticket.
+
+" 倒冲物料：只确认不传这里，库存就不会被扣
+ls_gm-orderid   = '1000023456'.
+ls_gm-operation = '0010'.
+ls_gm-material  = 'RM-1001'.
+ls_gm-plant     = '1000'.
+ls_gm-quantity  = 200.                 " 负数表示消耗
+ls_gm-batch     = 'B20261101'.
+ls_gm-move_type = '261'.
+APPEND ls_gm TO lt_gm.
+
+CALL FUNCTION 'BAPI_PRODORDCONF_CREATE_TT'
+  TABLES
+    timetickets     = lt_ticket
+    goodsmovements  = lt_gm
+    return          = lt_ret.
+
+CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+  EXPORTING wait = abap_true.`,
+    notes: [
+      '工时单位是分钟。传小时会让人工成本差 60 倍，而且不会报错。',
+      '倒冲物料必须显式放进 GOODSMOVEMENTS，否则只确认不扣料，库存虚高。',
+      '同一工序多次确认时要靠时间票做幂等，否则重复投递会重复报工。',
+    ],
+  },
 ]
 
 export const snippetById = Object.fromEntries(snippets.map((s) => [s.id, s]))
+

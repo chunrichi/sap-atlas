@@ -12,18 +12,24 @@ import { useViewStore } from '../state/viewStore'
 export default function GhostCompass() {
   const hover = useViewStore((s) => s.hover)
   const selectedStepId = useViewStore((s) => s.selectedStepId)
+  const focusedProcessId = useViewStore((s) => s.focusedProcessId)
   const size = useViewStore((s) => s.size)
   const vp = useViewport()
   const { goProcess } = useNavigate()
 
   const stepId = hover?.stepId ?? selectedStepId
-  const active = hover?.processId ?? null
+  const active = hover?.processId ?? focusedProcessId
 
   const marks = useMemo(() => {
     if (!stepId || size.w < 100) return []
     const all = instancesOf(stepId)
     if (all.length < 2) return []
-    const src = (active && all.find((i) => i.processId === active)) || all[0]
+    const inView = (i: (typeof all)[number]) => {
+      const p = toScreen(i.rect, vp)
+      return p.x > 40 && p.x < size.w - 40 && p.y > 40 && p.y < size.h - 40
+    }
+    const src = (active && all.find((i) => i.processId === active)) || all.find(inView)
+    if (!src) return []
     return all
       .filter((i) => i !== src)
       .map((i) => {

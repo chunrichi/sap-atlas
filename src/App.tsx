@@ -5,6 +5,7 @@ import StepHoverCard from './panels/StepHoverCard'
 import ObjectDrawer from './panels/ObjectDrawer'
 import CommandPalette from './panels/CommandPalette'
 import GhostCompass from './panels/GhostCompass'
+import FlowRail from './panels/FlowRail'
 import { useHashRoute } from './app/hooks/useHashRoute'
 import { validateContent } from './data'
 import { useViewStore } from './state/viewStore'
@@ -22,6 +23,7 @@ function Shell() {
       <MapCanvas />
       <Hud />
       <GhostCompass />
+      <FlowRail />
       <StepHoverCard />
       <ObjectDrawer />
       <CommandPalette />
@@ -31,9 +33,10 @@ function Shell() {
 
 export default function App() {
   const lod = useViewStore((s) => s.lod)
+  const flowOpen = useViewStore((s) => s.flowOpen)
 
   return (
-    <div className="app" data-lod={lod}>
+    <div className="app" data-lod={lod} data-flow={flowOpen ? '1' : '0'}>
       <ReactFlowProvider>
         <Shell />
       </ReactFlowProvider>

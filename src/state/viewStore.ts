@@ -18,6 +18,8 @@ type ViewState = {
   hover: HoverInfo | null
   objectId: string | null
   searchOpen: boolean
+  /** 端到端主线是否展开 */
+  flowOpen: boolean
   /** 导航动画结束的时间戳：动画途中会短暂经过 L0，不能据此清焦点 */
   navUntil: number
 
@@ -33,6 +35,7 @@ type ViewState = {
   hideNow: () => void
   openObject: (id: string) => void
   setSearchOpen: (v: boolean) => void
+  setFlowOpen: (v: boolean) => void
   markNav: (ms: number) => void
   closeObject: () => void
   reset: () => void
@@ -49,6 +52,7 @@ export const useViewStore = create<ViewState>((set, get) => ({
   hover: null,
   objectId: null,
   searchOpen: false,
+  flowOpen: false,
   navUntil: 0,
 
   setLod: (n) => {
@@ -85,6 +89,7 @@ export const useViewStore = create<ViewState>((set, get) => ({
   },
   openObject: (id) => set({ objectId: id }),
   setSearchOpen: (v) => set({ searchOpen: v }),
+  setFlowOpen: (v) => set({ flowOpen: v }),
   markNav: (ms) => set({ navUntil: Date.now() + ms }),
   closeObject: () => set({ objectId: null }),
   reset: () =>

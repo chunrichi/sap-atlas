@@ -12,24 +12,26 @@ import { useViewStore } from '../state/viewStore'
 export default function GhostLinks() {
   const hover = useViewStore((s) => s.hover)
   const selectedStepId = useViewStore((s) => s.selectedStepId)
+  const focusedProcessId = useViewStore((s) => s.focusedProcessId)
   const size = useViewStore((s) => s.size)
   const vp = useViewport()
 
   const stepId = hover?.stepId ?? selectedStepId
-  const active = hover?.processId ?? null
+  const active = hover?.processId ?? focusedProcessId
 
   const { from, others } = useMemo(() => {
-    if (!stepId) return { from: null, others: [] as ReturnType<typeof instancesOf> }
+    const none = { from: null as ReturnType<typeof instancesOf>[number] | null, others: [] as ReturnType<typeof instancesOf> }
+    if (!stepId) return none
     const all = instancesOf(stepId)
-    if (all.length < 2) return { from: null, others: [] as ReturnType<typeof instancesOf> }
-    const src = (active && all.find((i) => i.processId === active)) || all[0]
-    const visible = all
-      .filter((i) => i !== src)
-      .filter((i) => {
-        const p = toScreen(i.rect, vp)
-        return p.x > 0 && p.x < size.w && p.y > 0 && p.y < size.h
-      })
-    return { from: src, others: visible }
+    if (all.length < 2) return none
+    const inside = (i: (typeof all)[number]) => {
+      const p = toScreen(i.rect, vp)
+      return p.x > 0 && p.x < size.w && p.y > 0 && p.y < size.h
+    }
+    // 起点必须自己也在视口内，否则会从屏幕外拉一条莫名其妙的斜线进来
+    const src = (active && all.find((i) => i.processId === active)) || all.find(inside)
+    if (!src || !inside(src)) return none
+    return { from: src, others: all.filter((i) => i !== src).filter(inside) }
   }, [stepId, active, vp, size.w, size.h])
 
   if (!from || others.length === 0) return null

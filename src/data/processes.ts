@@ -169,6 +169,50 @@ export const processes: Process[] = [
       { from: 'fi.ar.incoming-payment', to: 'fi.ar.aging' },
     ],
   },
+  {
+    id: 'pp.mrp',
+    moduleId: 'pp',
+    name: '物料需求计划',
+    goal: '用需求倒推：什么时候该买、什么时候该做、做多少。',
+    trigger: '预测或销售订单进入需求，计划员跑 MRP',
+    outcome: '采购申请（外购件）与生产订单（自制件），以及需要人处理的例外消息',
+    lanes: [
+      { stepId: 'pp.mrp.demand', col: 0, row: 1 },
+      { stepId: 'pp.mrp.run', col: 1, row: 1 },
+      { stepId: 'mm.p2p.requisition', col: 2, row: 0 },
+      { stepId: 'pp.mrp.planned', col: 2, row: 1 },
+      { stepId: 'pp.prod.order', col: 3, row: 1 },
+    ],
+    edges: [
+      { from: 'pp.mrp.demand', to: 'pp.mrp.run' },
+      { from: 'pp.mrp.run', to: 'mm.p2p.requisition', kind: 'system' },
+      { from: 'pp.mrp.run', to: 'pp.mrp.planned', kind: 'system' },
+      { from: 'pp.mrp.planned', to: 'pp.prod.order' },
+    ],
+  },
+  {
+    id: 'pp.production',
+    moduleId: 'pp',
+    name: '生产执行',
+    goal: '把计划变成实物：发料、报工、入库，最后把差异算清楚。',
+    trigger: '生产订单下达',
+    outcome: '入库的成品 + 已结算的订单差异',
+    lanes: [
+      { stepId: 'pp.prod.order', col: 0, row: 0 },
+      { stepId: 'pp.prod.release', col: 1, row: 0 },
+      { stepId: 'pp.prod.issue', col: 2, row: 0 },
+      { stepId: 'pp.prod.confirm', col: 3, row: 0 },
+      { stepId: 'pp.prod.receipt', col: 4, row: 0 },
+      { stepId: 'pp.prod.settle', col: 5, row: 0 },
+    ],
+    edges: [
+      { from: 'pp.prod.order', to: 'pp.prod.release' },
+      { from: 'pp.prod.release', to: 'pp.prod.issue' },
+      { from: 'pp.prod.issue', to: 'pp.prod.confirm' },
+      { from: 'pp.prod.confirm', to: 'pp.prod.receipt' },
+      { from: 'pp.prod.receipt', to: 'pp.prod.settle' },
+    ],
+  },
 ]
 
 export const processById = Object.fromEntries(processes.map((p) => [p.id, p]))

@@ -10,6 +10,8 @@ export default function Hud() {
   const selectedStepId = useViewStore((s) => s.selectedStepId)
   const lod = useViewStore((s) => s.lod)
   const setSearchOpen = useViewStore((s) => s.setSearchOpen)
+  const flowOpen = useViewStore((s) => s.flowOpen)
+  const setFlowOpen = useViewStore((s) => s.setFlowOpen)
   const { goHome, goModule, goProcess } = useNavigate()
 
   const mod = focusedModuleId ? moduleById[focusedModuleId] : null
@@ -71,7 +73,7 @@ export default function Hud() {
         </button>
       </header>
 
-      <div className="hud-bottom">
+      <div className="hud-bottom" data-flow={flowOpen ? 'open' : 'closed'}>
         <div className="lod-meter" aria-label={`当前层级 ${LOD_LABEL[lod]}`}>
           {LOD_LABEL.map((label, i) => (
             <span key={label} className={cx('lod-dot', i === lod && 'is-on')}>
@@ -94,6 +96,14 @@ export default function Hud() {
             <i /> 异常分支
           </span>
         </div>
+        <button
+          type="button"
+          className={cx('flow-toggle', flowOpen && 'is-on')}
+          onClick={() => setFlowOpen(!flowOpen)}
+          title="端到端主线（F）"
+        >
+          主线 <kbd>F</kbd>
+        </button>
       </div>
 
       <div className="hud-hint">

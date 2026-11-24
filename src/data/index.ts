@@ -3,19 +3,24 @@ import { modules, moduleById, highways } from './modules'
 import { processes } from './processes'
 import { sdSteps, fiSteps, pricingSteps, creditSteps } from './steps'
 import { mmSteps, fiApSteps } from './steps/mm'
+import { ppSteps } from './steps/pp'
 import { abapApiObjects } from './objects/abap-api'
 import { enhancementObjects } from './objects/enhancement'
 import { dataModelObjects } from './objects/data-model'
 import { integrationObjects } from './objects/integration'
 import { mmObjects } from './objects/mm'
+import { ppObjects } from './objects/pp'
 import { snippets, snippetById } from './snippets'
+import { endToEndFlows, beatsOf, flowById } from './flows'
 
 export { modules, moduleById, highways, processes, snippets, snippetById }
+export { endToEndFlows, beatsOf, flowById }
 export * from './types'
 
 export const allSteps: Step[] = [
   ...sdSteps,
   ...mmSteps,
+  ...ppSteps,
   ...fiSteps,
   ...fiApSteps,
   ...pricingSteps,
@@ -28,6 +33,7 @@ export const allObjects: DevObject[] = [
   ...dataModelObjects,
   ...integrationObjects,
   ...mmObjects,
+  ...ppObjects,
 ]
 
 export const stepById = Object.fromEntries(allSteps.map((s) => [s.id, s])) as Record<string, Step>
