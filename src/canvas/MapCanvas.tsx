@@ -71,6 +71,22 @@ export default function MapCanvas() {
     setLod(lodFromZoom(zoom))
   }, [zoom, setLod])
 
+  /**
+   * 文本比图形更需要「最小屏幕字号」：
+   * 卡片在世界上是固定尺寸，缩小时字号会跟着缩成 6px。
+   * 把 1/zoom 写进 CSS 变量，样式里用 max(设计值, 最小屏幕值 * --inv) 反算，
+   * 让文字在低倍率下保持可读，又不会在高倍率下被放大。
+   * 只在变化超过 4% 时写入，避免缩放过程中每帧重算整棵子树样式。
+   */
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+    const inv = Math.min(3.4, 1 / Math.max(zoom, 0.2))
+    const last = parseFloat(el.style.getPropertyValue('--inv')) || 0
+    if (last && Math.abs(inv - last) / last < 0.04) return
+    el.style.setProperty('--inv', inv.toFixed(3))
+  }, [zoom])
+
   // 稳定停在 L0 才解除聚焦：否则「飞入模块」动画开头的那几帧会把焦点清掉
   useEffect(() => {
     if (lod !== 0) return

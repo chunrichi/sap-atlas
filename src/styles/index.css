@@ -482,13 +482,29 @@ button {
 }
 
 .app[data-lod="1"] .node-step {
+  padding: 9px 11px 9px 13px;
   background: color-mix(in srgb, var(--accent) 8%, #fff);
   border-color: color-mix(in srgb, var(--accent) 14%, transparent);
   box-shadow: none;
 }
 
-.app[data-lod="1"] .node-step > * {
+/* L1 就给出步骤名：文字比色块更能回答「这一步是什么」。
+   字号用 --inv 反算，保证最小屏幕字号（11px），缩小时不会变成 6px 的糊字。 */
+
+.app[data-lod="1"] .node-step > :not(.step-title) {
   opacity: 0 !important;
+}
+
+.app[data-lod="1"] .node-step .step-title {
+  font-size: max(19px, calc(11px * var(--inv, 1)));
+  line-height: 1.2;
+  padding-right: 0;
+  /* L1 最低倍率下字号约 35 世界px，3 行会超出卡片高度，所以锁 2 行 */
+  -webkit-line-clamp: 2;
+  color: color-mix(in srgb, var(--accent) 38%, var(--ink));
+  /* 满宽色条是绝对定位的，会把文字盖住；抬一层让它保持清晰 */
+  position: relative;
+  z-index: 1;
 }
 
 .app[data-lod="1"] .node-step::before {
@@ -1731,6 +1747,23 @@ button {
 /* L2 时对象数量字号过小，先收起，进 L3 再出现 */
 .app[data-lod="2"] .step-obj {
   display: none;
+}
+
+/* L2：标题与辅助行同样保证最小屏幕字号，避免「有字但看不清」 */
+.app[data-lod="2"] .step-title {
+  font-size: max(19px, calc(11px * var(--inv, 1)));
+}
+
+.app[data-lod="2"] .step-meta {
+  font-size: max(14px, calc(9.5px * var(--inv, 1)));
+}
+
+.app[data-lod="2"] .step-order {
+  font-size: max(15px, calc(10px * var(--inv, 1)));
+}
+
+.app[data-lod="2"] .step-also {
+  font-size: max(13px, calc(9px * var(--inv, 1)));
 }
 
 /* 右上角的搜索入口会和小地图打架，把地图下移 */
