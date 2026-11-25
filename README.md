@@ -1,5 +1,7 @@
 # SAP Atlas · 业务流程图志
 
+**[chunrichi.github.io/sap-atlas](https://chunrichi.github.io/sap-atlas/)** — 打开就能用，无需登录。
+
 把 SAP 看成一张**可缩放的地图**：模块 → 业务流程 → 步骤 → 开发对象。
 缩放不是"放大字体"，而是换一层表达：从六个模块岛，一路下钻到某一步的 BAPI 参数和示例代码。
 
