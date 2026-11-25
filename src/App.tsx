@@ -9,6 +9,8 @@ import GhostCompass from './panels/GhostCompass'
 import FlowRail from './panels/FlowRail'
 import BackToContent from './panels/BackToContent'
 import RecentRail from './panels/RecentRail'
+import ListPanel from './panels/ListPanel'
+import PathFinder from './panels/PathFinder'
 import { useHashRoute } from './app/hooks/useHashRoute'
 import { useNavigate } from './canvas/hooks/useNavigate'
 import { validateContent } from './data'
@@ -52,6 +54,14 @@ function Shell() {
           st.setImpactObject(null)
           return
         }
+        if (st.listOpen) {
+          st.setListOpen(false)
+          return
+        }
+        if (st.pathOpen) {
+          st.closePath()
+          return
+        }
         // 逐级退出：步骤 → 流程 → 模块 → 全局。用 replace，避免"退一级却多一条历史"
         if (st.selectedStepId && st.focusedProcessId) {
           nav.goProcess(st.focusedProcessId, { history: false })
@@ -70,6 +80,21 @@ function Shell() {
         e.preventDefault()
         st.setImpactObject(st.impactObjectId === st.objectId ? null : st.objectId)
         st.closeObject()
+        return
+      }
+
+      // L：清单视图（左栏）
+      if (e.key.toLowerCase() === 'l') {
+        e.preventDefault()
+        st.setListOpen(!st.listOpen)
+        return
+      }
+
+      // P：两点路径
+      if (e.key.toLowerCase() === 'p') {
+        e.preventDefault()
+        if (st.pathOpen) st.closePath()
+        else st.setPathOpen(true)
         return
       }
 
@@ -95,6 +120,8 @@ function Shell() {
     <>
       <MapCanvas />
       <Hud />
+      <ListPanel />
+      <PathFinder />
       <GhostCompass />
       <RecentRail />
       <BackToContent />
@@ -113,6 +140,7 @@ export default function App() {
   const offGrid = useViewStore((s) => s.offGrid)
   const filtering = useViewStore((s) => s.filter)
   const filterOn = filterActive(filtering)
+  const pathOn = useViewStore((s) => s.path)
 
   return (
     <div
@@ -122,6 +150,7 @@ export default function App() {
       data-impact={impact ? '1' : '0'}
       data-offgrid={offGrid ? '1' : '0'}
       data-filter={filterOn ? '1' : '0'}
+      data-path={pathOn ? '1' : '0'}
     >
       <ReactFlowProvider>
         <Shell />

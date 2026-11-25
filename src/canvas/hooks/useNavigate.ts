@@ -32,15 +32,30 @@ export type NavOpts = { history?: boolean }
 
 let navToken = 0
 
+/** 清单面板的宽度：它就是画布被占掉的左边距 */
+export const LIST_W = 408
+
+/**
+ * 取景必须知道「可视区被谁占着」：
+ * 清单打开时画布右侧才是自由区，居中要按剩余区域算，否则内容会藏到面板后面。
+ */
+export function canvasInset() {
+  const st = useViewStore.getState()
+  if (!st.listOpen) return 0
+  if (window.innerWidth <= 760) return 0
+  return LIST_W
+}
+
 function measure() {
   const el = document.querySelector('.react-flow') as HTMLElement | null
   const r = el?.getBoundingClientRect()
-  return { w: r?.width || 1280, h: r?.height || 800 }
+  const off = canvasInset()
+  return { w: (r?.width || 1280) - off, h: r?.height || 800, off }
 }
 
-function viewportFor(rect: Rect, zoom: number, vw: number, vh: number) {
+function viewportFor(rect: Rect, zoom: number, vw: number, vh: number, off = 0) {
   return {
-    x: vw / 2 - (rect.x + rect.w / 2) * zoom,
+    x: off + vw / 2 - (rect.x + rect.w / 2) * zoom,
     y: vh / 2 - (rect.y + rect.h / 2) * zoom,
     zoom,
   }
@@ -74,8 +89,9 @@ export function useNavigate() {
     (opts?: NavOpts) => {
       writeHash({ kind: 'home' }, historyMode(opts))
       reset()
-      const { w, h } = measure()
-      fly(homeViewport(w, h), 800)
+      const { w, h, off } = measure()
+      const home = homeViewport(w, h)
+      fly({ ...home, x: home.x + off }, 800)
     },
     [fly, reset],
   )
@@ -93,8 +109,8 @@ export function useNavigate() {
         title: `${m.code} ${m.name}`,
         accent: m.accent,
       })
-      const { w, h } = measure()
-      fly(viewportFor(moduleRect(m), ZOOM.module, w, h))
+      const { w, h, off } = measure()
+      fly(viewportFor(moduleRect(m), ZOOM.module, w, h, off))
     },
     [addRecent, fly, focusModule],
   )
@@ -116,7 +132,7 @@ export function useNavigate() {
         accent: m?.accent ?? '#64748b',
       })
       const lane = laneRect(m, laneIndexOf(p.moduleId, id))
-      const { w, h } = measure()
+      const { w, h, off } = measure()
       // 让整条流程一次看全：按内容宽高算缩放，而不是固定倍率
       const maxCol = p.lanes.reduce((n, l) => Math.max(n, l.col), 0)
       const maxRow = Math.max(maxRowOf(p), 0)
@@ -135,7 +151,7 @@ export function useNavigate() {
       const fitsW = contentW * zoom <= w - 48
       const fitsH = contentH * zoom <= h - 136
       const vp = {
-        x: fitsW ? w / 2 - (lane.x + contentW / 2) * zoom : 24 - lane.x * zoom,
+        x: off + (fitsW ? w / 2 - (lane.x + contentW / 2) * zoom : 24 - lane.x * zoom),
         y: fitsH ? h / 2 - (bandTop + contentH / 2) * zoom : 104 - bandTop * zoom,
         zoom,
       }
@@ -166,9 +182,9 @@ export function useNavigate() {
         title: step.name,
         accent: m?.accent ?? '#64748b',
       })
-      const { w, h } = measure()
+      const { w, h, off } = measure()
       const r = stepRect(lane, placement.col, placement.row, stepYBase(maxRowOf(p)))
-      fly(viewportFor(r, ZOOM.step, w, h), 620)
+      fly(viewportFor(r, ZOOM.step, w, h, off), 620)
     },
     [addRecent, fly, focusModule, focusProcess, selectStep],
   )

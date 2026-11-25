@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import type { ModuleId } from '../data/types'
 import { EMPTY_FILTER, type FilterState } from '../lib/filter'
 import { loadRecent, pushRecent, type RecentEntry } from '../lib/recent'
+import type { PathNode, PathRef } from '../lib/path'
+import { resolveRef } from '../lib/path'
 
 export type HoverInfo = {
   stepId: string
@@ -39,10 +41,23 @@ type ViewState = {
   filter: FilterState
   /** 最近访问，最多 8 条，落 localStorage */
   recent: RecentEntry[]
+  /** 左侧清单视图（步骤表 / 对象表） */
+  listOpen: boolean
+  /** 两点路径：面板、两端、结果 */
+  pathOpen: boolean
+  pathFrom: PathRef | null
+  pathTo: PathRef | null
+  path: PathNode[] | null
+  pathMiss: boolean
 
   setLod: (n: number) => void
   setOffGrid: (v: boolean) => void
   setCoarse: (v: boolean) => void
+  setListOpen: (v: boolean) => void
+  setPathOpen: (v: boolean) => void
+  setPathEnd: (which: 'from' | 'to', ref: PathRef | null) => void
+  setPath: (list: PathNode[] | null, miss?: boolean) => void
+  closePath: () => void
   setFilter: (patch: Partial<FilterState>) => void
   clearFilter: () => void
   addRecent: (entry: Omit<RecentEntry, 'at'>) => void
@@ -85,6 +100,12 @@ export const useViewStore = create<ViewState>((set, get) => ({
   coarse: false,
   filter: EMPTY_FILTER,
   recent: loadRecent(),
+  listOpen: false,
+  pathOpen: false,
+  pathFrom: null,
+  pathTo: null,
+  path: null,
+  pathMiss: false,
 
   setLod: (n) => {
     if (get().lod === n) return
@@ -98,6 +119,34 @@ export const useViewStore = create<ViewState>((set, get) => ({
     if (get().coarse === v) return
     set({ coarse: v })
   },
+  setListOpen: (v) => {
+    if (get().listOpen === v) return
+    set({ listOpen: v, hover: null })
+  },
+  setPathOpen: (v) => {
+    if (get().pathOpen === v) return
+    // 打开时把当前选中的步骤当起点：省掉「先点哪儿」的犹豫
+    const st = get()
+    const next: Partial<ViewState> = { pathOpen: v, hover: null }
+    if (v && !st.pathFrom && st.selectedStepId) {
+      next.pathFrom = resolveRef(st.selectedStepId, st.focusedProcessId)
+    }
+    if (!v) {
+      next.path = null
+      next.pathTo = null
+      next.pathMiss = false
+    }
+    set(next)
+  },
+  setPathEnd: (which, ref) =>
+    set(
+      which === 'from'
+        ? { pathFrom: ref, path: null, pathMiss: false }
+        : { pathTo: ref, path: null, pathMiss: false },
+    ),
+  setPath: (list, miss = false) => set({ path: list, pathMiss: miss }),
+  closePath: () =>
+    set({ pathOpen: false, pathFrom: null, pathTo: null, path: null, pathMiss: false }),
   setFilter: (patch) => set({ filter: { ...get().filter, ...patch } }),
   clearFilter: () => set({ filter: EMPTY_FILTER }),
   addRecent: (entry) => set({ recent: pushRecent(get().recent, entry) }),

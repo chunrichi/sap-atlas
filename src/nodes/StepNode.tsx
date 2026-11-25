@@ -19,6 +19,7 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
   const selectedStepId = useViewStore((s) => s.selectedStepId)
   const selectStep = useViewStore((s) => s.selectStep)
   const filter = useViewStore((s) => s.filter)
+  const path = useViewStore((s) => s.path)
   const { goStep } = useNavigate()
 
   const borrowed = home.id !== m.id
@@ -27,6 +28,8 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
   const impact = impactId ? step.objectIds.includes(impactId) : null
   const filteredOut = filterActive(filter) && !stepMatches(step, m.id, filter)
   const isSelected = selectedStepId === step.id
+  // 路径按 stepId 判断：同一步骤在别的流程里也是同一个知识点
+  const onPath = path ? path.some((n) => n.stepId === step.id) : null
 
   /** 触屏没有 hover：把卡片锚在卡片自身位置，由卡片自己改成底部抽屉 */
   const anchorCard = (el: HTMLElement) => {
@@ -51,6 +54,8 @@ function StepNodeView({ data }: NodeProps<StepFlowNode>) {
         impact === false && 'is-impact-dim',
         filteredOut && 'is-filter-dim',
         isSelected && 'is-selected',
+        onPath === true && 'is-path',
+        onPath === false && 'is-path-dim',
       )}
       data-kind={step.kind}
       style={

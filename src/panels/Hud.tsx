@@ -14,6 +14,11 @@ export default function Hud() {
   const setSearchOpen = useViewStore((s) => s.setSearchOpen)
   const flowOpen = useViewStore((s) => s.flowOpen)
   const setFlowOpen = useViewStore((s) => s.setFlowOpen)
+  const listOpen = useViewStore((s) => s.listOpen)
+  const setListOpen = useViewStore((s) => s.setListOpen)
+  const pathOpen = useViewStore((s) => s.pathOpen)
+  const setPathOpen = useViewStore((s) => s.setPathOpen)
+  const closePath = useViewStore((s) => s.closePath)
   const { goHome, goModule, goProcess } = useNavigate()
 
   const mod = focusedModuleId ? moduleById[focusedModuleId] : null
@@ -70,6 +75,25 @@ export default function Hud() {
 
         <ImpactChip />
 
+        <div className="hud-tools">
+          <button
+            type="button"
+            className={cx('hud-tool', listOpen && 'is-on')}
+            onClick={() => setListOpen(!listOpen)}
+            title="清单视图（L）"
+          >
+            清单 <kbd>L</kbd>
+          </button>
+          <button
+            type="button"
+            className={cx('hud-tool', pathOpen && 'is-on')}
+            onClick={() => (pathOpen ? closePath() : setPathOpen(true))}
+            title="两点路径（P）"
+          >
+            路径 <kbd>P</kbd>
+          </button>
+        </div>
+
         <button type="button" className="hud-search" onClick={() => setSearchOpen(true)}>
           <span aria-hidden>⌕</span>
           搜索知识库
@@ -112,7 +136,8 @@ export default function Hud() {
       </div>
 
       <div className="hud-hint">
-        <b>点击模块进入</b> · 滚轮缩放看细节 · 悬停步骤看开发对象 · <kbd>⌘K</kbd> 搜索
+        <b>点击模块进入</b> · 悬停步骤看开发对象 · <kbd>L</kbd> 清单 · <kbd>P</kbd> 路径 ·{' '}
+        <kbd>⌘K</kbd> 搜索
       </div>
     </>
   )

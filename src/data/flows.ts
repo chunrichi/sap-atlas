@@ -25,6 +25,11 @@ export type EndToEndFlow = {
   /** 途经模块，用于头部说明 */
   modules: string
   phases: FlowPhase[]
+  /**
+   * 这条线是另一条线的分叉：从父线的哪一步分出去。
+   * 退货不是"另一条主线"，它是开票之后的一个岔口 —— 数据结构要照实说。
+   */
+  branch?: { flowId: string; atStepId: string }
 }
 
 export const endToEndFlows: EndToEndFlow[] = [
@@ -80,6 +85,7 @@ export const endToEndFlows: EndToEndFlow[] = [
     name: '退货闭环',
     goal: '主线不是永远向前：货卖出去又回来时，账要能退回去，而且不留尾巴。',
     modules: 'SD → FI',
+    branch: { flowId: 'flow.p2c', atStepId: 'sd.o2c.billing' },
     phases: [
       {
         id: 'trigger',
