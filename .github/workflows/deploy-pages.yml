@@ -1,12 +1,10 @@
-# 只准备了部署流程，**尚未发布**。
-# 现在只有手动触发（workflow_dispatch），push 不会自动上线。
-# 确认要发布时，把下面的 push 触发器打开即可。
+# 发布到 GitHub Pages：push 到 main 自动构建部署，也可以手动触发。
 name: deploy-pages
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [main]
+  push:
+    branches: [main]
 
 permissions:
   contents: read

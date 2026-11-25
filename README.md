@@ -1,4 +1,4 @@
-# SAP Map · 业务流程知识地图
+# SAP Atlas · 业务流程图志
 
 把 SAP 看成一张**可缩放的地图**：模块 → 业务流程 → 步骤 → 开发对象。
 缩放不是"放大字体"，而是换一层表达：从六个模块岛，一路下钻到某一步的 BAPI 参数和示例代码。
@@ -122,7 +122,7 @@ src/data/
 
 - 这里的流程与开发对象说明是**重新撰写的结构化摘要**，不是 SAP 官方文档的搬运；每个对象都给了 SAP Help / Business Accelerator Hub 的检索入口。
 - SAP、S/4HANA 等是 SAP SE 的商标，本项目与之无关联。
-- 尚未发布到任何线上地址，只在本地开发。
+- 线上地址：[chunrichi.github.io/sap-atlas](https://chunrichi.github.io/sap-atlas/)
 
 ## 路线
 
@@ -134,4 +134,4 @@ src/data/
 - [x] M6 交互修复（悬停翻转 / 窄屏取景 / 浏览器后退）+ 对象反查与影响面
 - [x] M7 导航补全（回到内容 / 最近访问 / 触屏抽屉 / 焦点环）+ 筛选
 - [x] M8 清单视图 + 主线播放与退货分叉 + 任意两点路径
-- [ ] 上线 GitHub Pages（待定）
+- [x] 上线 GitHub Pages

@@ -31,8 +31,8 @@ export default function Hud() {
         <button type="button" className="brand" onClick={() => goHome()}>
           <span className="brand-mark" />
           <span className="brand-text">
-            <b>SAP Map</b>
-            <em>业务流程知识地图</em>
+            <b>SAP Atlas</b>
+            <em>业务流程图志</em>
           </span>
         </button>
 
