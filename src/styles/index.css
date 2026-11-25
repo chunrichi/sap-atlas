@@ -3142,7 +3142,7 @@ button {
 
 .lp-tcode {
   flex: none;
-  width: 46px;
+  width: 44px;
   font-family: var(--mono);
   font-size: 10px;
   color: var(--ink-2);
@@ -3150,7 +3150,7 @@ button {
 
 .lp-kind {
   flex: none;
-  width: 48px;
+  width: 44px;
   font-size: 10px;
   color: var(--ink-3);
 }
@@ -3176,7 +3176,7 @@ button {
 
 .lp-proc {
   flex: none;
-  max-width: 92px;
+  max-width: 80px;
   padding: 4px 6px;
   border-radius: 6px;
   font-size: 10px;
